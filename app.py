@@ -37,6 +37,15 @@ def create_app():
             "business_name": app.config["BUSINESS_NAME"],
             "currency": app.config["CURRENCY_SYMBOL"],
             "tax_rate": app.config["TAX_RATE"],
+            "brand": {
+                "primary": app.config["BRAND_PRIMARY"],
+                "primary_hover": app.config["BRAND_PRIMARY_HOVER"],
+                "navbar_bg": app.config["BRAND_NAVBAR_BG"],
+                "navbar_text": app.config["BRAND_NAVBAR_TEXT"],
+                "logo_url": app.config["BRAND_LOGO_URL"],
+                "font": app.config["BRAND_FONT"],
+                "receipt_footer": app.config["BRAND_RECEIPT_FOOTER"],
+            },
         }
 
     # ==================== AUTH ====================

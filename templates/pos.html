@@ -109,6 +109,8 @@
 const CURRENCY = "{{ currency }}";
 const TAX_RATE = {{ tax_rate }};
 const BUSINESS_NAME = "{{ business_name }}";
+const BRAND_LOGO = "{{ brand.logo_url }}";
+const RECEIPT_FOOTER = "{{ brand.receipt_footer }}";
 
 let cart = [];
 let currentDiscount = 0;
@@ -353,6 +355,7 @@ function showReceipt(data) {
     const date = new Date(data.created_at).toLocaleString();
     let html = `
         <div class="receipt">
+            ${BRAND_LOGO ? `<img src="${BRAND_LOGO}" alt="${BUSINESS_NAME}" class="receipt-logo">` : ''}
             <h3>${BUSINESS_NAME}</h3>
             <p class="receipt-date">${date}</p>
             <p>Receipt: ${data.receipt_number}</p>
@@ -381,6 +384,7 @@ function showReceipt(data) {
         html += `<p>Tendered: ${CURRENCY}${data.amount_tendered.toFixed(2)}</p>`;
         html += `<p>Change: ${CURRENCY}${data.change_due.toFixed(2)}</p>`;
     }
+    if (RECEIPT_FOOTER) html += `<hr><p class="receipt-footer">${RECEIPT_FOOTER}</p>`;
     html += `</div></div>`;
 
     document.getElementById("receipt-body").innerHTML = html;

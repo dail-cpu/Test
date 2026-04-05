@@ -1,0 +1,16 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SECRET_KEY=change-this-to-a-random-string
+      - PLATFORM_NAME=GenPOS
+      - SUPERADMIN_USERNAME=superadmin
+      - SUPERADMIN_PASSWORD=changeme
+    volumes:
+      - pos_data:/app/instance
+    restart: unless-stopped
+
+volumes:
+  pos_data:

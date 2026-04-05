@@ -138,6 +138,7 @@
 
 {% block scripts %}
 <script>
+const SLUG = "{{ tenant.slug }}";
 function openProductForm(data) {
     document.getElementById("product-form-title").textContent = data ? "Edit Product" : "Add Product";
     document.getElementById("pf-id").value = data?.id || "";
@@ -173,7 +174,7 @@ document.getElementById("product-form").addEventListener("submit", (e) => {
         track_stock: document.getElementById("pf-track-stock").checked,
         is_active: document.getElementById("pf-active").checked,
     };
-    fetch("/admin/products/save", {
+    fetch(`/${SLUG}/admin/products/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -187,7 +188,7 @@ document.getElementById("product-form").addEventListener("submit", (e) => {
 
 function deactivateProduct(id) {
     if (!confirm("Deactivate this product?")) return;
-    fetch(`/admin/products/${id}/delete`, { method: "POST" })
+    fetch(`/${SLUG}/admin/products/${id}/delete`, { method: "POST" })
     .then(r => r.json())
     .then(() => location.reload());
 }
@@ -205,7 +206,7 @@ function closeCategoryModal() {
 
 document.getElementById("category-form").addEventListener("submit", (e) => {
     e.preventDefault();
-    fetch("/admin/categories/save", {
+    fetch(`/${SLUG}/admin/categories/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

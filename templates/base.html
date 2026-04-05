@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ business_name }} POS{% endblock %}</title>
-    {% if brand.font %}
+    {% if brand and brand.font %}
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family={{ brand.font | urlencode }}:wght@400;500;600;700&display=swap" rel="stylesheet">
     {% endif %}
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% if brand %}
     <style>
         :root {
             --primary: {{ brand.primary }};
@@ -20,25 +21,27 @@
         }
         {% if brand.font %}body { font-family: var(--brand-font); }{% endif %}
     </style>
+    {% endif %}
     {% block head %}{% endblock %}
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-brand">
-            {% if brand.logo_url %}<img src="{{ brand.logo_url }}" alt="{{ business_name }}" class="nav-logo">{% endif %}
+            {% if brand and brand.logo_url %}<img src="{{ brand.logo_url }}" alt="{{ business_name }}" class="nav-logo">{% endif %}
             {{ business_name }}
         </div>
         <div class="nav-links">
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('pos') }}" class="nav-link {% if request.endpoint == 'pos' %}active{% endif %}">POS Terminal</a>
+            {% if current_user.is_authenticated and tenant %}
+                <a href="{{ url_for('tenant_pos', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_pos' %}active{% endif %}">POS Terminal</a>
                 {% if current_user.is_admin %}
-                    <a href="{{ url_for('admin_products') }}" class="nav-link {% if request.endpoint == 'admin_products' %}active{% endif %}">Products</a>
-                    <a href="{{ url_for('admin_sales') }}" class="nav-link {% if request.endpoint == 'admin_sales' %}active{% endif %}">Sales</a>
-                    <a href="{{ url_for('admin_reports') }}" class="nav-link {% if request.endpoint == 'admin_reports' %}active{% endif %}">Reports</a>
-                    <a href="{{ url_for('admin_users') }}" class="nav-link {% if request.endpoint == 'admin_users' %}active{% endif %}">Users</a>
+                    <a href="{{ url_for('tenant_admin_products', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_admin_products' %}active{% endif %}">Products</a>
+                    <a href="{{ url_for('tenant_admin_sales', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_admin_sales' %}active{% endif %}">Sales</a>
+                    <a href="{{ url_for('tenant_admin_reports', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_admin_reports' %}active{% endif %}">Reports</a>
+                    <a href="{{ url_for('tenant_admin_users', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_admin_users' %}active{% endif %}">Users</a>
+                    <a href="{{ url_for('tenant_admin_settings', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_admin_settings' %}active{% endif %}">Settings</a>
                 {% endif %}
                 <span class="nav-user">{{ current_user.display_name }}</span>
-                <a href="{{ url_for('logout') }}" class="nav-link logout-link">Logout</a>
+                <a href="{{ url_for('tenant_logout', slug=tenant.slug) }}" class="nav-link logout-link">Logout</a>
             {% endif %}
         </div>
     </nav>

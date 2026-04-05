@@ -73,6 +73,7 @@
 
 {% block scripts %}
 <script>
+const SLUG = "{{ tenant.slug }}";
 function openUserForm(data) {
     document.getElementById("user-form-title").textContent = data ? "Edit User" : "Add User";
     document.getElementById("uf-id").value = data?.id || "";
@@ -97,7 +98,7 @@ document.getElementById("user-form").addEventListener("submit", (e) => {
     const password = document.getElementById("uf-password").value;
     if (!id && !password) { alert("Password is required for new users."); return; }
 
-    fetch("/admin/users/save", {
+    fetch(`/${SLUG}/admin/users/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

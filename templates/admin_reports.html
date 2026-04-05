@@ -69,10 +69,11 @@
 {% block scripts %}
 <script>
 const CURRENCY = "{{ currency }}";
+const SLUG = "{{ tenant.slug }}";
 
 function loadReport() {
     const days = document.getElementById("period-select").value;
-    fetch(`/api/reports/summary?days=${days}`)
+    fetch(`/${SLUG}/api/reports/summary?days=${days}`)
     .then(r => r.json())
     .then(data => {
         document.getElementById("stat-revenue").textContent = CURRENCY + data.total_revenue.toFixed(2);

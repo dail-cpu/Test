@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Admin - {{ platform_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">{{ platform_name }} Admin</div>
+        <div class="nav-links">
+            <span class="nav-user">Super Admin</span>
+            <a href="{{ url_for('landing') }}" class="nav-link logout-link">Logout</a>
+        </div>
+    </nav>
+    <div class="admin-page">
+        <h1>Platform Dashboard</h1>
+
+        <div class="stats-grid" style="margin-top:1.5rem">
+            <div class="stat-card">
+                <div class="stat-label">Total Businesses</div>
+                <div class="stat-value">{{ total_tenants }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Revenue (All)</div>
+                <div class="stat-value">${{ "%.2f" | format(total_revenue) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Transactions</div>
+                <div class="stat-value">{{ total_sales }}</div>
+            </div>
+        </div>
+
+        <h2 style="margin:2rem 0 1rem">Businesses</h2>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Business</th>
+                    <th>Slug</th>
+                    <th>Email</th>
+                    <th>Products</th>
+                    <th>Users</th>
+                    <th>Sales</th>
+                    <th>Revenue</th>
+                    <th>Created</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ts in tenant_stats %}
+                <tr class="{% if not ts.tenant.is_active %}row-inactive{% endif %}">
+                    <td><strong>{{ ts.tenant.business_name }}</strong></td>
+                    <td><a href="{{ url_for('tenant_login', slug=ts.tenant.slug) }}">{{ ts.tenant.slug }}</a></td>
+                    <td>{{ ts.tenant.owner_email }}</td>
+                    <td>{{ ts.products }}</td>
+                    <td>{{ ts.users }}</td>
+                    <td>{{ ts.sales }}</td>
+                    <td>${{ "%.2f" | format(ts.revenue) }}</td>
+                    <td>{{ ts.tenant.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ "Active" if ts.tenant.is_active else "Suspended" }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('superadmin_toggle_tenant', tenant_id=ts.tenant.id) }}" style="display:inline">
+                            <button type="submit" class="btn btn-sm {% if ts.tenant.is_active %}btn-danger{% else %}btn-primary{% endif %}">
+                                {{ "Suspend" if ts.tenant.is_active else "Activate" }}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not tenant_stats %}
+                <tr><td colspan="10" style="text-align:center;color:#64748b;padding:2rem">No businesses yet. They'll appear here once someone signs up.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

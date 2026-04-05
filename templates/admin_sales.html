@@ -58,9 +58,10 @@
 {% block scripts %}
 <script>
 const CURRENCY = "{{ currency }}";
+const SLUG = "{{ tenant.slug }}";
 
 function viewSale(id) {
-    fetch(`/api/sales/${id}`)
+    fetch(`/${SLUG}/api/sales/${id}`)
     .then(r => r.json())
     .then(data => {
         const date = new Date(data.created_at).toLocaleString();

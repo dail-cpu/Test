@@ -111,6 +111,7 @@ const TAX_RATE = {{ tax_rate }};
 const BUSINESS_NAME = "{{ business_name }}";
 const BRAND_LOGO = "{{ brand.logo_url }}";
 const RECEIPT_FOOTER = "{{ brand.receipt_footer }}";
+const SLUG = "{{ tenant.slug }}";
 
 let cart = [];
 let currentDiscount = 0;
@@ -326,7 +327,7 @@ function confirmPayment() {
 
     document.getElementById("confirm-payment-btn").disabled = true;
 
-    fetch("/api/checkout", {
+    fetch(`/${SLUG}/api/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

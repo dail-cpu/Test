@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Settings - {{ business_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <h1>Business Settings</h1>
+
+    <div class="settings-grid">
+        <div class="settings-section">
+            <h2>General</h2>
+            <form id="settings-form">
+                <div class="form-group">
+                    <label>Business Name</label>
+                    <input type="text" id="sf-name" value="{{ tenant.business_name }}">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tax Rate (decimal, e.g. 0.08 = 8%)</label>
+                        <input type="number" id="sf-tax" step="0.001" min="0" max="1" value="{{ tenant.tax_rate }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Currency Symbol</label>
+                        <input type="text" id="sf-currency" value="{{ tenant.currency_symbol }}" maxlength="5">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Receipt Footer Message</label>
+                    <input type="text" id="sf-footer" value="{{ tenant.receipt_footer }}">
+                </div>
+            </form>
+        </div>
+
+        <div class="settings-section">
+            <h2>Branding</h2>
+            <form id="brand-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Primary Color</label>
+                        <input type="color" id="sf-primary" value="{{ tenant.brand_primary }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Hover Color</label>
+                        <input type="color" id="sf-primary-hover" value="{{ tenant.brand_primary_hover }}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Navbar Background</label>
+                        <input type="color" id="sf-navbar-bg" value="{{ tenant.brand_navbar_bg }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Navbar Text Color</label>
+                        <input type="color" id="sf-navbar-text" value="{{ tenant.brand_navbar_text }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Logo URL (optional)</label>
+                    <input type="text" id="sf-logo" value="{{ tenant.brand_logo_url }}" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Google Font Name (optional)</label>
+                    <input type="text" id="sf-font" value="{{ tenant.brand_font }}" placeholder="e.g. Inter, Poppins">
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div style="margin-top:1.5rem">
+        <button class="btn btn-primary" onclick="saveSettings()">Save All Settings</button>
+        <span id="save-status" style="margin-left:1rem;color:#22c55e;display:none">Saved!</span>
+    </div>
+
+    <div class="settings-section" style="margin-top:2rem">
+        <h2>Your POS URL</h2>
+        <p>Share this link with your team:</p>
+        <code class="url-display" id="pos-url"></code>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SLUG = "{{ tenant.slug }}";
+document.getElementById("pos-url").textContent = window.location.origin + "/" + SLUG + "/";
+
+function saveSettings() {
+    const payload = {
+        business_name: document.getElementById("sf-name").value,
+        tax_rate: document.getElementById("sf-tax").value,
+        currency_symbol: document.getElementById("sf-currency").value,
+        receipt_footer: document.getElementById("sf-footer").value,
+        brand_primary: document.getElementById("sf-primary").value,
+        brand_primary_hover: document.getElementById("sf-primary-hover").value,
+        brand_navbar_bg: document.getElementById("sf-navbar-bg").value,
+        brand_navbar_text: document.getElementById("sf-navbar-text").value,
+        brand_logo_url: document.getElementById("sf-logo").value,
+        brand_font: document.getElementById("sf-font").value,
+    };
+
+    fetch(`/${SLUG}/admin/settings/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert(data.error); return; }
+        const status = document.getElementById("save-status");
+        status.style.display = "inline";
+        setTimeout(() => { status.style.display = "none"; }, 2000);
+    });
+}
+</script>
+{% endblock %}

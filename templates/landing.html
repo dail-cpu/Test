@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ platform_name }} - {{ platform_tagline }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="landing-body">
+    <nav class="landing-nav">
+        <div class="nav-brand">{{ platform_name }}</div>
+        <div class="nav-links">
+            <a href="{{ url_for('signup') }}" class="btn btn-primary">Get Started Free</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>{{ platform_tagline }}</h1>
+        <p class="hero-sub">A simple, powerful point of sale system that runs in your browser. No hardware, no downloads, no hassle.</p>
+        <div class="hero-actions">
+            <a href="{{ url_for('signup') }}" class="btn btn-primary btn-xl">Start Free Now</a>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">&#9889;</div>
+                <h3>Ready in 30 Seconds</h3>
+                <p>Sign up, add your products, and start selling. No complex setup or installation required.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#128176;</div>
+                <h3>Sales & Checkout</h3>
+                <p>Fast product grid, cart management, cash and card payments with automatic change calculation.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#128230;</div>
+                <h3>Inventory Tracking</h3>
+                <p>Track stock levels, set up categories, manage SKUs. Know when to reorder.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#128200;</div>
+                <h3>Reports & Insights</h3>
+                <p>Revenue, profit, top products, daily trends. Make data-driven decisions.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#127912;</div>
+                <h3>Your Brand</h3>
+                <p>Custom colors, logo, fonts, and receipt footer. It looks like your business, not ours.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#128101;</div>
+                <h3>Team Management</h3>
+                <p>Admin and cashier roles. Track who sold what. Secure login for every team member.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <h2>Start selling in minutes</h2>
+        <p>No credit card required. Free to try.</p>
+        <a href="{{ url_for('signup') }}" class="btn btn-primary btn-xl">Create Your POS</a>
+    </section>
+
+    <footer class="landing-footer">
+        <p>&copy; 2026 {{ platform_name }}. All rights reserved.</p>
+    </footer>
+</body>
+</html>

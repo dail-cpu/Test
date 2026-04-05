@@ -1,16 +1,49 @@
-"""Seed script to populate the database with sample data for demo purposes."""
+"""Seed script to create a demo tenant with sample data."""
 
 from app import create_app
-from models import Category, Product, User, db
+from models import Category, Product, Tenant, User, db
 
 
 def seed():
     app = create_app()
     with app.app_context():
-        # Skip if data already exists
-        if Product.query.first():
-            print("Database already has data. Skipping seed.")
+        if Tenant.query.first():
+            print("Database already has tenants. Skipping seed.")
             return
+
+        # Demo tenant
+        tenant = Tenant(
+            slug="demo",
+            business_name="Demo Coffee Shop",
+            owner_email="demo@example.com",
+            tax_rate=0.08,
+            currency_symbol="$",
+            brand_primary="#b45309",
+            brand_primary_hover="#92400e",
+            brand_navbar_bg="#451a03",
+        )
+        db.session.add(tenant)
+        db.session.flush()
+
+        # Admin user for demo tenant
+        admin = User(
+            tenant_id=tenant.id,
+            username="admin",
+            display_name="Demo Admin",
+            role="admin",
+        )
+        admin.set_password("admin")
+        db.session.add(admin)
+
+        # Cashier user
+        cashier = User(
+            tenant_id=tenant.id,
+            username="cashier",
+            display_name="Front Register",
+            role="cashier",
+        )
+        cashier.set_password("cashier")
+        db.session.add(cashier)
 
         # Categories
         categories = {
@@ -18,11 +51,10 @@ def seed():
             "Food": "#f59e0b",
             "Snacks": "#22c55e",
             "Desserts": "#ec4899",
-            "Other": "#6366f1",
         }
         cat_objs = {}
         for name, color in categories.items():
-            cat = Category(name=name, color=color)
+            cat = Category(tenant_id=tenant.id, name=name, color=color)
             db.session.add(cat)
             cat_objs[name] = cat
         db.session.flush()
@@ -41,14 +73,13 @@ def seed():
             ("Wrap", "FOD-004", 7.50, 3.25, 25, "Food"),
             ("Chips", "SNK-001", 2.50, 1.00, 50, "Snacks"),
             ("Cookie", "SNK-002", 3.00, 1.25, 40, "Snacks"),
-            ("Granola Bar", "SNK-003", 2.75, 1.10, 60, "Snacks"),
             ("Muffin", "DST-001", 4.00, 1.75, 30, "Desserts"),
             ("Brownie", "DST-002", 3.50, 1.50, 25, "Desserts"),
             ("Cheesecake Slice", "DST-003", 5.50, 2.50, 15, "Desserts"),
-            ("Gift Card $25", "OTH-001", 25.00, 25.00, 50, "Other"),
         ]
         for name, sku, price, cost, stock, cat_name in products:
             p = Product(
+                tenant_id=tenant.id,
                 name=name,
                 sku=sku,
                 price=price,
@@ -60,20 +91,12 @@ def seed():
             )
             db.session.add(p)
 
-        # Cashier user
-        cashier = User(
-            username="cashier",
-            display_name="Front Register",
-            role="cashier",
-        )
-        cashier.set_password("cashier")
-        db.session.add(cashier)
-
         db.session.commit()
-        print("Database seeded successfully!")
-        print("  - 5 categories")
-        print(f"  - {len(products)} products")
-        print("  - Users: admin/admin, cashier/cashier")
+        print("Demo tenant seeded successfully!")
+        print(f"  - Tenant: demo (Demo Coffee Shop)")
+        print(f"  - POS URL: /demo/")
+        print(f"  - Tenant login: admin/admin or cashier/cashier")
+        print(f"  - Super admin: /superadmin/login (superadmin/changeme)")
 
 
 if __name__ == "__main__":

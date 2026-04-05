@@ -9,15 +9,11 @@ class Config:
         "DATABASE_URL", f"sqlite:///{os.path.join(basedir, 'instance', 'pos.db')}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    BUSINESS_NAME = os.environ.get("BUSINESS_NAME", "My Business")
-    TAX_RATE = float(os.environ.get("TAX_RATE", "0.0"))
-    CURRENCY_SYMBOL = os.environ.get("CURRENCY_SYMBOL", "$")
 
-    # Branding / Theme
-    BRAND_PRIMARY = os.environ.get("BRAND_PRIMARY", "#6366f1")
-    BRAND_PRIMARY_HOVER = os.environ.get("BRAND_PRIMARY_HOVER", "#4f46e5")
-    BRAND_NAVBAR_BG = os.environ.get("BRAND_NAVBAR_BG", "#1e293b")
-    BRAND_NAVBAR_TEXT = os.environ.get("BRAND_NAVBAR_TEXT", "#ffffff")
-    BRAND_LOGO_URL = os.environ.get("BRAND_LOGO_URL", "")  # URL or path to logo image
-    BRAND_FONT = os.environ.get("BRAND_FONT", "")  # Google Font name, e.g. "Inter"
-    BRAND_RECEIPT_FOOTER = os.environ.get("BRAND_RECEIPT_FOOTER", "Thank you for your purchase!")
+    # Platform branding (your SaaS name)
+    PLATFORM_NAME = os.environ.get("PLATFORM_NAME", "GenPOS")
+    PLATFORM_TAGLINE = os.environ.get("PLATFORM_TAGLINE", "Point of Sale for Modern Businesses")
+
+    # Super admin credentials (created on first run)
+    SUPERADMIN_USERNAME = os.environ.get("SUPERADMIN_USERNAME", "superadmin")
+    SUPERADMIN_PASSWORD = os.environ.get("SUPERADMIN_PASSWORD", "changeme")

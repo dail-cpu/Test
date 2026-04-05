@@ -212,6 +212,25 @@ select { padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius
 .settings-section h2 { font-size: 1.1rem; margin-bottom: 1rem; }
 .url-display { display: block; background: var(--bg); padding: 0.75rem 1rem; border-radius: var(--radius); font-size: 0.9rem; margin-top: 0.5rem; word-break: break-all; }
 
+/* === Billing & Plans === */
+.current-plan-card { display: flex; justify-content: space-between; align-items: center; background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); margin-top: 1.5rem; }
+.plan-usage p { margin: 0.25rem 0; font-size: 0.9rem; }
+.plan-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+.plan-free { background: #f1f5f9; color: #64748b; }
+.plan-starter { background: #dbeafe; color: #1d4ed8; }
+.plan-pro { background: #fef3c7; color: #92400e; }
+
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.pricing-card { background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 2rem; text-align: center; }
+.pricing-card.pricing-active { border-color: var(--primary); }
+.pricing-card h3 { font-size: 1.25rem; margin-bottom: 1rem; }
+.pricing-features { list-style: none; text-align: left; margin-bottom: 1.5rem; }
+.pricing-features li { padding: 0.4rem 0; font-size: 0.9rem; border-bottom: 1px solid var(--border); }
+.pricing-features li:last-child { border-bottom: none; }
+
+.upgrade-badge { font-size: 0.7rem; background: #fef3c7; color: #92400e; padding: 0.15rem 0.5rem; border-radius: 8px; font-weight: 500; vertical-align: middle; }
+.form-locked { opacity: 0.4; pointer-events: none; }
+
 /* === Responsive === */
 @media (max-width: 768px) {
     .pos-layout { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
@@ -223,4 +242,5 @@ select { padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius
     .hero h1 { font-size: 2rem; }
     .feature-grid { grid-template-columns: 1fr; }
     .settings-grid { grid-template-columns: 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
 }

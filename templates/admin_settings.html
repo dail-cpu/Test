@@ -31,8 +31,8 @@
         </div>
 
         <div class="settings-section">
-            <h2>Branding</h2>
-            <form id="brand-form">
+            <h2>Branding {% if not plan_limits.custom_branding %}<span class="upgrade-badge">Upgrade to unlock</span>{% endif %}</h2>
+            <form id="brand-form" {% if not plan_limits.custom_branding %}class="form-locked"{% endif %}>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Primary Color</label>
@@ -74,6 +74,13 @@
         <h2>Your POS URL</h2>
         <p>Share this link with your team:</p>
         <code class="url-display" id="pos-url"></code>
+        {% if plan_limits.custom_branding %}
+        <div class="form-group" style="margin-top:1rem">
+            <label>Custom Domain (optional)</label>
+            <input type="text" id="sf-domain" value="{{ tenant.custom_domain or '' }}" placeholder="pos.yourbusiness.com">
+            <small style="color:var(--text-muted)">Point a CNAME record to this server, then enter the domain here.</small>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -95,6 +102,7 @@ function saveSettings() {
         brand_navbar_text: document.getElementById("sf-navbar-text").value,
         brand_logo_url: document.getElementById("sf-logo").value,
         brand_font: document.getElementById("sf-font").value,
+        custom_domain: (document.getElementById("sf-domain") || {}).value || "",
     };
 
     fetch(`/${SLUG}/admin/settings/save`, {

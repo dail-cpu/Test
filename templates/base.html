@@ -39,6 +39,7 @@
                     <a href="{{ url_for('tenant_admin_reports', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_admin_reports' %}active{% endif %}">Reports</a>
                     <a href="{{ url_for('tenant_admin_users', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_admin_users' %}active{% endif %}">Users</a>
                     <a href="{{ url_for('tenant_admin_settings', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_admin_settings' %}active{% endif %}">Settings</a>
+                    <a href="{{ url_for('tenant_admin_billing', slug=tenant.slug) }}" class="nav-link {% if request.endpoint == 'tenant_admin_billing' %}active{% endif %}">Billing</a>
                 {% endif %}
                 <span class="nav-user">{{ current_user.display_name }}</span>
                 <a href="{{ url_for('tenant_logout', slug=tenant.slug) }}" class="nav-link logout-link">Logout</a>

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Billing - {{ business_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <h1>Billing & Plan</h1>
+
+    {% if request.args.get('upgraded') %}
+    <div class="flash flash-success">Your plan has been upgraded! Changes take effect immediately.</div>
+    {% endif %}
+
+    <div class="current-plan-card">
+        <div>
+            <div class="stat-label">Current Plan</div>
+            <div class="stat-value plan-badge plan-{{ tenant.plan }}">{{ plans[tenant.plan]['label'] }}</div>
+        </div>
+        <div class="plan-usage">
+            <p>Products: <strong>{{ product_count }}</strong> / {{ plans[tenant.plan]['products'] if plans[tenant.plan]['products'] < 99999 else 'Unlimited' }}</p>
+            <p>Users: <strong>{{ user_count }}</strong> / {{ plans[tenant.plan]['users'] if plans[tenant.plan]['users'] < 99999 else 'Unlimited' }}</p>
+            <p>Custom Branding: <strong>{{ 'Yes' if plans[tenant.plan]['custom_branding'] else 'No' }}</strong></p>
+        </div>
+    </div>
+
+    <h2 style="margin:2rem 0 1rem">Available Plans</h2>
+    <div class="pricing-grid">
+        {% for plan_key, plan in plans.items() %}
+        <div class="pricing-card {% if tenant.plan == plan_key %}pricing-active{% endif %}">
+            <h3>{{ plan['label'] }}</h3>
+            <ul class="pricing-features">
+                <li>{{ plan['products'] if plan['products'] < 99999 else 'Unlimited' }} products</li>
+                <li>{{ plan['users'] if plan['users'] < 99999 else 'Unlimited' }} users</li>
+                <li>{% if plan['custom_branding'] %}Custom branding{% else %}Standard branding{% endif %}</li>
+                <li>Sales & reports</li>
+                <li>Receipt printing</li>
+            </ul>
+            {% if tenant.plan == plan_key %}
+                <button class="btn btn-full" disabled>Current Plan</button>
+            {% elif plan_key == 'free' %}
+                {% if tenant.stripe_subscription_id and stripe_enabled %}
+                    <button class="btn btn-full" onclick="openPortal()">Manage Subscription</button>
+                {% endif %}
+            {% elif stripe_enabled %}
+                <button class="btn btn-primary btn-full" onclick="upgradeTo('{{ plan_key }}')">Upgrade</button>
+            {% else %}
+                <button class="btn btn-full" disabled>Contact to Upgrade</button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if tenant.stripe_subscription_id and stripe_enabled %}
+    <div style="margin-top:2rem">
+        <button class="btn" onclick="openPortal()">Manage Subscription / Payment Method</button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SLUG = "{{ tenant.slug }}";
+
+function upgradeTo(plan) {
+    fetch(`/${SLUG}/api/billing/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert(data.error); return; }
+        window.location.href = data.checkout_url;
+    });
+}
+
+function openPortal() {
+    fetch(`/${SLUG}/api/billing/portal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert(data.error); return; }
+        window.location.href = data.portal_url;
+    });
+}
+</script>
+{% endblock %}

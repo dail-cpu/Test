@@ -21,6 +21,12 @@ class Tenant(db.Model):
         db.DateTime, default=lambda: datetime.now(timezone.utc)
     )
 
+    # Billing
+    plan = db.Column(db.String(20), default="free")  # free, starter, pro
+    stripe_customer_id = db.Column(db.String(80), nullable=True)
+    stripe_subscription_id = db.Column(db.String(80), nullable=True)
+    custom_domain = db.Column(db.String(120), nullable=True, unique=True)
+
     # Settings
     tax_rate = db.Column(db.Float, default=0.0)
     currency_symbol = db.Column(db.String(5), default="$")

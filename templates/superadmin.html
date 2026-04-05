@@ -38,6 +38,7 @@
                 <tr>
                     <th>Business</th>
                     <th>Slug</th>
+                    <th>Plan</th>
                     <th>Email</th>
                     <th>Products</th>
                     <th>Users</th>
@@ -53,6 +54,7 @@
                 <tr class="{% if not ts.tenant.is_active %}row-inactive{% endif %}">
                     <td><strong>{{ ts.tenant.business_name }}</strong></td>
                     <td><a href="{{ url_for('tenant_login', slug=ts.tenant.slug) }}">{{ ts.tenant.slug }}</a></td>
+                    <td><span class="plan-badge plan-{{ ts.tenant.plan }}">{{ ts.tenant.plan }}</span></td>
                     <td>{{ ts.tenant.owner_email }}</td>
                     <td>{{ ts.products }}</td>
                     <td>{{ ts.users }}</td>
@@ -70,7 +72,7 @@
                 </tr>
                 {% endfor %}
                 {% if not tenant_stats %}
-                <tr><td colspan="10" style="text-align:center;color:#64748b;padding:2rem">No businesses yet. They'll appear here once someone signs up.</td></tr>
+                <tr><td colspan="11" style="text-align:center;color:#64748b;padding:2rem">No businesses yet. They'll appear here once someone signs up.</td></tr>
                 {% endif %}
             </tbody>
         </table>

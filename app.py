@@ -3,6 +3,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
+import stripe
 from flask import (
     Flask,
     abort,
@@ -34,6 +35,23 @@ def create_app():
 
     db.init_app(app)
 
+    # Stripe setup
+    stripe.api_key = app.config["STRIPE_SECRET_KEY"]
+    stripe_enabled = bool(app.config["STRIPE_SECRET_KEY"])
+
+    def get_plan_limits(plan_name):
+        return app.config["PLAN_LIMITS"].get(plan_name, app.config["PLAN_LIMITS"]["free"])
+
+    def check_plan_limit(tenant, resource):
+        """Check if tenant has hit their plan limit for a resource. Returns (allowed, limit)."""
+        limits = get_plan_limits(tenant.plan)
+        current = 0
+        if resource == "products":
+            current = Product.query.filter_by(tenant_id=tenant.id, is_active=True).count()
+        elif resource == "users":
+            current = User.query.filter_by(tenant_id=tenant.id).count()
+        return current < limits[resource], limits[resource]
+
     login_manager = LoginManager()
     login_manager.init_app(app)
 
@@ -57,17 +75,37 @@ def create_app():
             "platform_tagline": app.config["PLATFORM_TAGLINE"],
         }
         if tenant:
+            plan_limits = get_plan_limits(tenant.plan)
             ctx.update({
                 "business_name": tenant.business_name,
                 "currency": tenant.currency_symbol,
                 "tax_rate": tenant.tax_rate,
                 "brand": tenant.brand,
                 "tenant": tenant,
+                "plan": tenant.plan,
+                "plan_limits": plan_limits,
+                "stripe_enabled": stripe_enabled,
+                "stripe_publishable_key": app.config["STRIPE_PUBLISHABLE_KEY"],
             })
         return ctx
 
+    # --- Custom domain handler ---
+    @app.before_request
+    def check_custom_domain():
+        host = request.host.split(":")[0]
+        # Skip for localhost / IP / platform domain
+        if host in ("localhost", "127.0.0.1") or host.endswith(".localhost"):
+            return
+        tenant = Tenant.query.filter_by(custom_domain=host, is_active=True).first()
+        if tenant:
+            g.tenant = tenant
+            g.custom_domain = True
+
     # --- Tenant loader helper ---
     def load_tenant(slug):
+        # If already loaded via custom domain, use that
+        if g.get("custom_domain") and g.get("tenant"):
+            return g.tenant
         tenant = Tenant.query.filter_by(slug=slug, is_active=True).first()
         if not tenant:
             abort(404)
@@ -356,6 +394,9 @@ def create_app():
             if not product:
                 return jsonify({"error": "Not found"}), 404
         else:
+            allowed, limit = check_plan_limit(tenant, "products")
+            if not allowed:
+                return jsonify({"error": f"Product limit reached ({limit}). Upgrade your plan to add more."}), 403
             product = Product(tenant_id=tenant.id)
             db.session.add(product)
 
@@ -546,6 +587,9 @@ def create_app():
             if not user:
                 return jsonify({"error": "Not found"}), 404
         else:
+            allowed, limit = check_plan_limit(tenant, "users")
+            if not allowed:
+                return jsonify({"error": f"User limit reached ({limit}). Upgrade your plan to add more."}), 403
             user = User(tenant_id=tenant.id)
             db.session.add(user)
 
@@ -583,16 +627,148 @@ def create_app():
         tenant.business_name = data.get("business_name", tenant.business_name).strip()
         tenant.tax_rate = float(data.get("tax_rate", tenant.tax_rate))
         tenant.currency_symbol = data.get("currency_symbol", tenant.currency_symbol).strip()
-        tenant.brand_primary = data.get("brand_primary", tenant.brand_primary)
-        tenant.brand_primary_hover = data.get("brand_primary_hover", tenant.brand_primary_hover)
-        tenant.brand_navbar_bg = data.get("brand_navbar_bg", tenant.brand_navbar_bg)
-        tenant.brand_navbar_text = data.get("brand_navbar_text", tenant.brand_navbar_text)
-        tenant.brand_logo_url = data.get("brand_logo_url", tenant.brand_logo_url)
-        tenant.brand_font = data.get("brand_font", tenant.brand_font)
         tenant.receipt_footer = data.get("receipt_footer", tenant.receipt_footer)
+
+        plan_limits = get_plan_limits(tenant.plan)
+        if plan_limits["custom_branding"]:
+            tenant.brand_primary = data.get("brand_primary", tenant.brand_primary)
+            tenant.brand_primary_hover = data.get("brand_primary_hover", tenant.brand_primary_hover)
+            tenant.brand_navbar_bg = data.get("brand_navbar_bg", tenant.brand_navbar_bg)
+            tenant.brand_navbar_text = data.get("brand_navbar_text", tenant.brand_navbar_text)
+            tenant.brand_logo_url = data.get("brand_logo_url", tenant.brand_logo_url)
+            tenant.brand_font = data.get("brand_font", tenant.brand_font)
+            custom_domain = data.get("custom_domain", "").strip().lower()
+            if custom_domain:
+                existing = Tenant.query.filter(
+                    Tenant.custom_domain == custom_domain,
+                    Tenant.id != tenant.id,
+                ).first()
+                if existing:
+                    return jsonify({"error": "That domain is already in use"}), 400
+                tenant.custom_domain = custom_domain
+            else:
+                tenant.custom_domain = None
 
         db.session.commit()
         return jsonify({"message": "Settings saved"})
+
+    # ==================== BILLING ====================
+
+    @app.route("/<slug>/admin/billing")
+    def tenant_admin_billing(slug):
+        tenant = load_tenant(slug)
+
+        @tenant_admin_required
+        def inner():
+            plans = app.config["PLAN_LIMITS"]
+            product_count = Product.query.filter_by(tenant_id=tenant.id, is_active=True).count()
+            user_count = User.query.filter_by(tenant_id=tenant.id).count()
+            return render_template(
+                "admin_billing.html",
+                plans=plans,
+                product_count=product_count,
+                user_count=user_count,
+            )
+        return inner()
+
+    @app.route("/<slug>/api/billing/checkout", methods=["POST"])
+    @login_required
+    def create_checkout_session(slug):
+        tenant = load_tenant(slug)
+        if not current_user.is_admin or current_user.tenant_id != tenant.id:
+            return jsonify({"error": "Access denied"}), 403
+        if not stripe_enabled:
+            return jsonify({"error": "Billing is not configured"}), 400
+
+        data = request.get_json()
+        plan = data.get("plan")
+
+        price_map = {
+            "starter": app.config["STRIPE_PRICE_STARTER"],
+            "pro": app.config["STRIPE_PRICE_PRO"],
+        }
+        price_id = price_map.get(plan)
+        if not price_id:
+            return jsonify({"error": "Invalid plan"}), 400
+
+        # Create or reuse Stripe customer
+        if not tenant.stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=tenant.owner_email,
+                name=tenant.business_name,
+                metadata={"tenant_id": tenant.id, "slug": tenant.slug},
+            )
+            tenant.stripe_customer_id = customer.id
+            db.session.commit()
+
+        session = stripe.checkout.Session.create(
+            customer=tenant.stripe_customer_id,
+            payment_method_types=["card"],
+            line_items=[{"price": price_id, "quantity": 1}],
+            mode="subscription",
+            success_url=request.host_url.rstrip("/") + url_for("tenant_admin_billing", slug=slug) + "?upgraded=1",
+            cancel_url=request.host_url.rstrip("/") + url_for("tenant_admin_billing", slug=slug),
+            metadata={"tenant_id": str(tenant.id), "plan": plan},
+        )
+        return jsonify({"checkout_url": session.url})
+
+    @app.route("/<slug>/api/billing/portal", methods=["POST"])
+    @login_required
+    def create_billing_portal(slug):
+        tenant = load_tenant(slug)
+        if not current_user.is_admin or current_user.tenant_id != tenant.id:
+            return jsonify({"error": "Access denied"}), 403
+        if not stripe_enabled or not tenant.stripe_customer_id:
+            return jsonify({"error": "No billing account found"}), 400
+
+        session = stripe.billing_portal.Session.create(
+            customer=tenant.stripe_customer_id,
+            return_url=request.host_url.rstrip("/") + url_for("tenant_admin_billing", slug=slug),
+        )
+        return jsonify({"portal_url": session.url})
+
+    @app.route("/stripe/webhook", methods=["POST"])
+    def stripe_webhook():
+        if not stripe_enabled:
+            abort(404)
+
+        payload = request.get_data(as_text=True)
+        sig_header = request.headers.get("Stripe-Signature")
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, app.config["STRIPE_WEBHOOK_SECRET"]
+            )
+        except (ValueError, stripe.error.SignatureVerificationError):
+            abort(400)
+
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            tenant_id = session.get("metadata", {}).get("tenant_id")
+            plan = session.get("metadata", {}).get("plan")
+            if tenant_id and plan:
+                tenant = db.session.get(Tenant, int(tenant_id))
+                if tenant:
+                    tenant.plan = plan
+                    tenant.stripe_subscription_id = session.get("subscription")
+                    db.session.commit()
+
+        elif event["type"] == "customer.subscription.deleted":
+            sub = event["data"]["object"]
+            tenant = Tenant.query.filter_by(stripe_subscription_id=sub["id"]).first()
+            if tenant:
+                tenant.plan = "free"
+                tenant.stripe_subscription_id = None
+                db.session.commit()
+
+        elif event["type"] == "customer.subscription.updated":
+            sub = event["data"]["object"]
+            tenant = Tenant.query.filter_by(stripe_subscription_id=sub["id"]).first()
+            if tenant and sub["status"] != "active":
+                tenant.plan = "free"
+                db.session.commit()
+
+        return jsonify({"status": "ok"})
 
     # ==================== HELPERS ====================
 

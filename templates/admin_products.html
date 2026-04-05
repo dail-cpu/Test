@@ -45,7 +45,7 @@
                 <td>{% if p.track_stock %}{{ p.stock }}{% else %}N/A{% endif %}</td>
                 <td>{{ "Active" if p.is_active else "Inactive" }}</td>
                 <td>
-                    <button class="btn btn-sm" onclick='editProduct({{ p | tojson }})'>Edit</button>
+                    <button class="btn btn-sm" onclick='editProduct({"id":{{ p.id }},"name":"{{ p.name | e }}","sku":"{{ p.sku or "" }}","price":{{ p.price }},"cost":{{ p.cost }},"category_id":{{ p.category_id or "null" }},"stock":{{ p.stock }},"track_stock":{{ p.track_stock | lower }},"is_active":{{ p.is_active | lower }}})'>Edit</button>
                     {% if p.is_active %}
                         <button class="btn btn-sm btn-danger" onclick="deactivateProduct({{ p.id }})">Deactivate</button>
                     {% endif %}

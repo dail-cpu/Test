@@ -26,7 +26,7 @@
                 <td>{{ u.role }}</td>
                 <td>{{ "Active" if u.is_active_user else "Inactive" }}</td>
                 <td>
-                    <button class="btn btn-sm" onclick='editUser({{ u | tojson }})'>Edit</button>
+                    <button class="btn btn-sm" onclick='editUser({"id":{{ u.id }},"username":"{{ u.username | e }}","display_name":"{{ u.display_name | e }}","role":"{{ u.role }}","is_active_user":{{ u.is_active_user | lower }}})'>Edit</button>
                 </td>
             </tr>
             {% endfor %}

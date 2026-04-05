@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Login - {{ business_name }}{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <h1>{{ business_name }}</h1>
+        <p class="login-subtitle">Point of Sale System</p>
+        <form method="POST" class="login-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+        <p class="login-hint">Default: admin / admin</p>
+    </div>
+</div>
+{% endblock %}

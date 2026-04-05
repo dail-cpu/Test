@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+{% block title %}POS Terminal - {{ business_name }}{% endblock %}
+
+{% block content %}
+<div class="pos-layout">
+    <!-- Product Grid -->
+    <div class="pos-products">
+        <div class="pos-filters">
+            <button class="cat-btn active" data-category="all">All</button>
+            {% for cat in categories %}
+                <button class="cat-btn" data-category="{{ cat.id }}" style="--cat-color: {{ cat.color }}">{{ cat.name }}</button>
+            {% endfor %}
+            <input type="text" id="product-search" placeholder="Search products..." class="search-input">
+        </div>
+        <div class="product-grid" id="product-grid">
+            {% for product in products %}
+                <button class="product-card {% if not product.in_stock %}out-of-stock{% endif %}"
+                        data-id="{{ product.id }}"
+                        data-name="{{ product.name }}"
+                        data-price="{{ product.price }}"
+                        data-stock="{{ product.stock }}"
+                        data-track="{{ product.track_stock | lower }}"
+                        data-category="{{ product.category_id or '' }}"
+                        {% if not product.in_stock %}disabled{% endif %}>
+                    <span class="product-name">{{ product.name }}</span>
+                    <span class="product-price">{{ currency }}{{ "%.2f" | format(product.price) }}</span>
+                    {% if product.track_stock %}
+                        <span class="product-stock">Stock: {{ product.stock }}</span>
+                    {% endif %}
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Cart -->
+    <div class="pos-cart">
+        <h2 class="cart-title">Current Sale</h2>
+        <div class="cart-items" id="cart-items">
+            <p class="cart-empty">Cart is empty</p>
+        </div>
+        <div class="cart-summary">
+            <div class="summary-row">
+                <span>Subtotal</span>
+                <span id="cart-subtotal">{{ currency }}0.00</span>
+            </div>
+            {% if tax_rate > 0 %}
+            <div class="summary-row">
+                <span>Tax ({{ "%.1f" | format(tax_rate * 100) }}%)</span>
+                <span id="cart-tax">{{ currency }}0.00</span>
+            </div>
+            {% endif %}
+            <div class="summary-row" id="discount-row" style="display:none">
+                <span>Discount</span>
+                <span id="cart-discount">-{{ currency }}0.00</span>
+            </div>
+            <div class="summary-row summary-total">
+                <span>Total</span>
+                <span id="cart-total">{{ currency }}0.00</span>
+            </div>
+        </div>
+        <div class="cart-actions">
+            <div class="action-row">
+                <button class="btn btn-sm" onclick="applyDiscount()">Discount</button>
+                <button class="btn btn-sm" onclick="addNote()">Note</button>
+                <button class="btn btn-sm btn-danger" onclick="clearCart()">Clear</button>
+            </div>
+            <div class="payment-row">
+                <button class="btn btn-primary btn-lg" onclick="processPayment('cash')">Cash</button>
+                <button class="btn btn-secondary btn-lg" onclick="processPayment('card')">Card</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal" id="payment-modal">
+    <div class="modal-content">
+        <h2>Payment</h2>
+        <div id="payment-details"></div>
+        <div id="cash-section" style="display:none">
+            <div class="form-group">
+                <label>Amount Tendered</label>
+                <input type="number" id="amount-tendered" step="0.01" min="0" class="input-lg">
+            </div>
+            <div class="change-display" id="change-display"></div>
+            <div class="quick-cash" id="quick-cash"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" id="confirm-payment-btn" onclick="confirmPayment()">Confirm Payment</button>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal" id="receipt-modal">
+    <div class="modal-content receipt-content">
+        <div id="receipt-body"></div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeReceipt()">Close</button>
+            <button class="btn btn-primary" onclick="printReceipt()">Print Receipt</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CURRENCY = "{{ currency }}";
+const TAX_RATE = {{ tax_rate }};
+const BUSINESS_NAME = "{{ business_name }}";
+
+let cart = [];
+let currentDiscount = 0;
+let currentNote = "";
+let currentPaymentMethod = "cash";
+
+// --- Product filtering ---
+document.querySelectorAll(".cat-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        filterProducts();
+    });
+});
+
+document.getElementById("product-search").addEventListener("input", filterProducts);
+
+function filterProducts() {
+    const cat = document.querySelector(".cat-btn.active").dataset.category;
+    const search = document.getElementById("product-search").value.toLowerCase();
+    document.querySelectorAll(".product-card").forEach(card => {
+        const matchCat = cat === "all" || card.dataset.category === cat;
+        const matchSearch = card.dataset.name.toLowerCase().includes(search);
+        card.style.display = matchCat && matchSearch ? "" : "none";
+    });
+}
+
+// --- Cart ---
+document.querySelectorAll(".product-card").forEach(card => {
+    card.addEventListener("click", () => {
+        if (card.disabled) return;
+        addToCart(
+            parseInt(card.dataset.id),
+            card.dataset.name,
+            parseFloat(card.dataset.price),
+            parseInt(card.dataset.stock),
+            card.dataset.track === "true"
+        );
+    });
+});
+
+function addToCart(id, name, price, stock, trackStock) {
+    const existing = cart.find(i => i.id === id);
+    if (existing) {
+        if (trackStock && existing.qty >= stock) return;
+        existing.qty++;
+    } else {
+        cart.push({ id, name, price, stock, trackStock, qty: 1 });
+    }
+    renderCart();
+}
+
+function updateQty(id, delta) {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) {
+        cart = cart.filter(i => i.id !== id);
+    } else if (item.trackStock && item.qty > item.stock) {
+        item.qty = item.stock;
+    }
+    renderCart();
+}
+
+function removeItem(id) {
+    cart = cart.filter(i => i.id !== id);
+    renderCart();
+}
+
+function clearCart() {
+    cart = [];
+    currentDiscount = 0;
+    currentNote = "";
+    renderCart();
+}
+
+function getSubtotal() {
+    return cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+}
+
+function getTotal() {
+    const sub = getSubtotal();
+    const tax = sub * TAX_RATE;
+    return Math.max(sub + tax - currentDiscount, 0);
+}
+
+function renderCart() {
+    const container = document.getElementById("cart-items");
+    if (cart.length === 0) {
+        container.innerHTML = '<p class="cart-empty">Cart is empty</p>';
+    } else {
+        container.innerHTML = cart.map(item => `
+            <div class="cart-item">
+                <div class="cart-item-info">
+                    <span class="cart-item-name">${item.name}</span>
+                    <span class="cart-item-price">${CURRENCY}${(item.price * item.qty).toFixed(2)}</span>
+                </div>
+                <div class="cart-item-controls">
+                    <button class="qty-btn" onclick="updateQty(${item.id}, -1)">-</button>
+                    <span class="qty-display">${item.qty}</span>
+                    <button class="qty-btn" onclick="updateQty(${item.id}, 1)">+</button>
+                    <button class="remove-btn" onclick="removeItem(${item.id})">&times;</button>
+                </div>
+            </div>
+        `).join("");
+    }
+
+    const sub = getSubtotal();
+    const tax = sub * TAX_RATE;
+    document.getElementById("cart-subtotal").textContent = CURRENCY + sub.toFixed(2);
+    if (document.getElementById("cart-tax")) {
+        document.getElementById("cart-tax").textContent = CURRENCY + tax.toFixed(2);
+    }
+
+    const discountRow = document.getElementById("discount-row");
+    if (currentDiscount > 0) {
+        discountRow.style.display = "";
+        document.getElementById("cart-discount").textContent = "-" + CURRENCY + currentDiscount.toFixed(2);
+    } else {
+        discountRow.style.display = "none";
+    }
+
+    document.getElementById("cart-total").textContent = CURRENCY + getTotal().toFixed(2);
+}
+
+function applyDiscount() {
+    const val = prompt("Enter discount amount:");
+    if (val !== null) {
+        currentDiscount = Math.max(parseFloat(val) || 0, 0);
+        renderCart();
+    }
+}
+
+function addNote() {
+    const val = prompt("Add a note to this sale:", currentNote);
+    if (val !== null) currentNote = val;
+}
+
+// --- Payment ---
+function processPayment(method) {
+    if (cart.length === 0) return;
+    currentPaymentMethod = method;
+    const total = getTotal();
+
+    let html = `<p class="payment-total">Total: <strong>${CURRENCY}${total.toFixed(2)}</strong></p>`;
+    html += `<p>Method: <strong>${method.charAt(0).toUpperCase() + method.slice(1)}</strong></p>`;
+    document.getElementById("payment-details").innerHTML = html;
+
+    const cashSection = document.getElementById("cash-section");
+    if (method === "cash") {
+        cashSection.style.display = "";
+        document.getElementById("amount-tendered").value = "";
+        document.getElementById("change-display").textContent = "";
+
+        // Quick cash buttons
+        const quickAmounts = [
+            Math.ceil(total),
+            Math.ceil(total / 5) * 5,
+            Math.ceil(total / 10) * 10,
+            Math.ceil(total / 20) * 20,
+            Math.ceil(total / 50) * 50,
+        ];
+        const unique = [...new Set(quickAmounts)].filter(a => a >= total).slice(0, 4);
+        document.getElementById("quick-cash").innerHTML = unique.map(a =>
+            `<button class="btn btn-sm" onclick="document.getElementById('amount-tendered').value=${a};updateChange()">${CURRENCY}${a.toFixed(2)}</button>`
+        ).join("");
+
+        document.getElementById("amount-tendered").addEventListener("input", updateChange);
+    } else {
+        cashSection.style.display = "none";
+    }
+
+    document.getElementById("payment-modal").classList.add("open");
+}
+
+function updateChange() {
+    const tendered = parseFloat(document.getElementById("amount-tendered").value) || 0;
+    const total = getTotal();
+    const change = tendered - total;
+    const display = document.getElementById("change-display");
+    if (tendered >= total) {
+        display.textContent = `Change: ${CURRENCY}${change.toFixed(2)}`;
+        display.className = "change-display change-ok";
+    } else {
+        display.textContent = `Short: ${CURRENCY}${Math.abs(change).toFixed(2)}`;
+        display.className = "change-display change-short";
+    }
+}
+
+function closeModal() {
+    document.getElementById("payment-modal").classList.remove("open");
+}
+
+function confirmPayment() {
+    const total = getTotal();
+    let amountTendered = total;
+
+    if (currentPaymentMethod === "cash") {
+        amountTendered = parseFloat(document.getElementById("amount-tendered").value) || 0;
+        if (amountTendered < total) {
+            alert("Amount tendered is less than total.");
+            return;
+        }
+    }
+
+    const payload = {
+        items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
+        payment_method: currentPaymentMethod,
+        amount_tendered: amountTendered,
+        discount: currentDiscount,
+        note: currentNote,
+    };
+
+    document.getElementById("confirm-payment-btn").disabled = true;
+
+    fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            document.getElementById("confirm-payment-btn").disabled = false;
+            return;
+        }
+        closeModal();
+        showReceipt(data);
+        clearCart();
+        // Refresh product stock display
+        location.reload();
+    })
+    .catch(err => {
+        alert("Error processing payment: " + err);
+        document.getElementById("confirm-payment-btn").disabled = false;
+    });
+}
+
+// --- Receipt ---
+function showReceipt(data) {
+    const date = new Date(data.created_at).toLocaleString();
+    let html = `
+        <div class="receipt">
+            <h3>${BUSINESS_NAME}</h3>
+            <p class="receipt-date">${date}</p>
+            <p>Receipt: ${data.receipt_number}</p>
+            <p>Cashier: ${data.cashier}</p>
+            <hr>
+            <table class="receipt-table">
+                <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                <tbody>
+    `;
+    data.items.forEach(item => {
+        html += `<tr>
+            <td>${item.name}</td>
+            <td>${item.quantity}</td>
+            <td>${CURRENCY}${item.unit_price.toFixed(2)}</td>
+            <td>${CURRENCY}${item.subtotal.toFixed(2)}</td>
+        </tr>`;
+    });
+    html += `</tbody></table><hr>`;
+    html += `<div class="receipt-totals">
+        <p>Subtotal: ${CURRENCY}${data.subtotal.toFixed(2)}</p>`;
+    if (data.tax_amount > 0) html += `<p>Tax: ${CURRENCY}${data.tax_amount.toFixed(2)}</p>`;
+    if (data.discount_amount > 0) html += `<p>Discount: -${CURRENCY}${data.discount_amount.toFixed(2)}</p>`;
+    html += `<p class="receipt-grand-total">Total: ${CURRENCY}${data.total.toFixed(2)}</p>`;
+    html += `<p>Payment: ${data.payment_method}</p>`;
+    if (data.payment_method === "cash") {
+        html += `<p>Tendered: ${CURRENCY}${data.amount_tendered.toFixed(2)}</p>`;
+        html += `<p>Change: ${CURRENCY}${data.change_due.toFixed(2)}</p>`;
+    }
+    html += `</div></div>`;
+
+    document.getElementById("receipt-body").innerHTML = html;
+    document.getElementById("receipt-modal").classList.add("open");
+}
+
+function closeReceipt() {
+    document.getElementById("receipt-modal").classList.remove("open");
+}
+
+function printReceipt() {
+    const content = document.getElementById("receipt-body").innerHTML;
+    const win = window.open("", "_blank", "width=400,height=600");
+    win.document.write(`<html><head><title>Receipt</title>
+        <style>body{font-family:monospace;max-width:350px;margin:auto;padding:20px}
+        table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:2px 4px}
+        hr{border:1px dashed #000}.receipt-grand-total{font-size:1.2em;font-weight:bold}</style>
+        </head><body>${content}<script>window.print();window.close();<\/script></body></html>`);
+}
+
+// Keyboard shortcuts
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        closeModal();
+        closeReceipt();
+    }
+    if (e.key === "F2") { e.preventDefault(); processPayment("cash"); }
+    if (e.key === "F3") { e.preventDefault(); processPayment("card"); }
+    if (e.key === "F4") { e.preventDefault(); clearCart(); }
+});
+</script>
+{% endblock %}

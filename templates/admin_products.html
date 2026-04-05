@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Manage Products - {{ business_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="admin-header">
+        <h1>Products</h1>
+        <button class="btn btn-primary" onclick="openProductForm()">+ Add Product</button>
+    </div>
+
+    <div class="admin-section">
+        <h2>Categories</h2>
+        <div class="category-list">
+            {% for cat in categories %}
+                <span class="category-tag" style="background: {{ cat.color }}; color: #fff"
+                      onclick='openCategoryForm({{ cat.id }}, "{{ cat.name }}", "{{ cat.color }}")'>
+                    {{ cat.name }} ({{ cat.products | length }})
+                </span>
+            {% endfor %}
+            <button class="btn btn-sm" onclick="openCategoryForm()">+ Category</button>
+        </div>
+    </div>
+
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>SKU</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Cost</th>
+                <th>Stock</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in products %}
+            <tr class="{% if not p.is_active %}row-inactive{% endif %}">
+                <td>{{ p.name }}</td>
+                <td>{{ p.sku or '-' }}</td>
+                <td>{{ p.category.name if p.category else '-' }}</td>
+                <td>{{ currency }}{{ "%.2f" | format(p.price) }}</td>
+                <td>{{ currency }}{{ "%.2f" | format(p.cost) }}</td>
+                <td>{% if p.track_stock %}{{ p.stock }}{% else %}N/A{% endif %}</td>
+                <td>{{ "Active" if p.is_active else "Inactive" }}</td>
+                <td>
+                    <button class="btn btn-sm" onclick='editProduct({{ p | tojson }})'>Edit</button>
+                    {% if p.is_active %}
+                        <button class="btn btn-sm btn-danger" onclick="deactivateProduct({{ p.id }})">Deactivate</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Product Form Modal -->
+<div class="modal" id="product-modal">
+    <div class="modal-content">
+        <h2 id="product-form-title">Add Product</h2>
+        <form id="product-form">
+            <input type="hidden" id="pf-id">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="pf-name" required>
+                </div>
+                <div class="form-group">
+                    <label>SKU</label>
+                    <input type="text" id="pf-sku">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Price *</label>
+                    <input type="number" id="pf-price" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Cost</label>
+                    <input type="number" id="pf-cost" step="0.01" min="0" value="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="pf-category">
+                        <option value="">None</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Stock</label>
+                    <input type="number" id="pf-stock" min="0" value="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label><input type="checkbox" id="pf-track-stock" checked> Track Stock</label>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="pf-active" checked> Active</label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeProductModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Product</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Category Form Modal -->
+<div class="modal" id="category-modal">
+    <div class="modal-content">
+        <h2>Category</h2>
+        <form id="category-form">
+            <input type="hidden" id="cf-id">
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" id="cf-name" required>
+            </div>
+            <div class="form-group">
+                <label>Color</label>
+                <input type="color" id="cf-color" value="#6366f1">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeCategoryModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openProductForm(data) {
+    document.getElementById("product-form-title").textContent = data ? "Edit Product" : "Add Product";
+    document.getElementById("pf-id").value = data?.id || "";
+    document.getElementById("pf-name").value = data?.name || "";
+    document.getElementById("pf-sku").value = data?.sku || "";
+    document.getElementById("pf-price").value = data?.price || "";
+    document.getElementById("pf-cost").value = data?.cost || 0;
+    document.getElementById("pf-category").value = data?.category_id || "";
+    document.getElementById("pf-stock").value = data?.stock || 0;
+    document.getElementById("pf-track-stock").checked = data?.track_stock !== false;
+    document.getElementById("pf-active").checked = data?.is_active !== false;
+    document.getElementById("product-modal").classList.add("open");
+}
+
+function editProduct(data) {
+    openProductForm(data);
+}
+
+function closeProductModal() {
+    document.getElementById("product-modal").classList.remove("open");
+}
+
+document.getElementById("product-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const payload = {
+        id: document.getElementById("pf-id").value || null,
+        name: document.getElementById("pf-name").value,
+        sku: document.getElementById("pf-sku").value,
+        price: document.getElementById("pf-price").value,
+        cost: document.getElementById("pf-cost").value,
+        category_id: document.getElementById("pf-category").value || null,
+        stock: document.getElementById("pf-stock").value,
+        track_stock: document.getElementById("pf-track-stock").checked,
+        is_active: document.getElementById("pf-active").checked,
+    };
+    fetch("/admin/products/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert(data.error); return; }
+        location.reload();
+    });
+});
+
+function deactivateProduct(id) {
+    if (!confirm("Deactivate this product?")) return;
+    fetch(`/admin/products/${id}/delete`, { method: "POST" })
+    .then(r => r.json())
+    .then(() => location.reload());
+}
+
+function openCategoryForm(id, name, color) {
+    document.getElementById("cf-id").value = id || "";
+    document.getElementById("cf-name").value = name || "";
+    document.getElementById("cf-color").value = color || "#6366f1";
+    document.getElementById("category-modal").classList.add("open");
+}
+
+function closeCategoryModal() {
+    document.getElementById("category-modal").classList.remove("open");
+}
+
+document.getElementById("category-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    fetch("/admin/categories/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: document.getElementById("cf-id").value || null,
+            name: document.getElementById("cf-name").value,
+            color: document.getElementById("cf-color").value,
+        }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert(data.error); return; }
+        location.reload();
+    });
+});
+</script>
+{% endblock %}

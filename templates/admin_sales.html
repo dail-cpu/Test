@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Sales History - {{ business_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <h1>Sales History</h1>
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Receipt #</th>
+                <th>Date</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Payment</th>
+                <th>Cashier</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in sales.items %}
+            <tr>
+                <td>{{ sale.receipt_number }}</td>
+                <td>{{ sale.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ sale.items | length }}</td>
+                <td>{{ currency }}{{ "%.2f" | format(sale.total) }}</td>
+                <td>{{ sale.payment_method }}</td>
+                <td>{{ sale.cashier.display_name }}</td>
+                <td><button class="btn btn-sm" onclick="viewSale({{ sale.id }})">View</button></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if sales.pages > 1 %}
+    <div class="pagination">
+        {% if sales.has_prev %}
+            <a href="?page={{ sales.prev_num }}" class="btn btn-sm">&laquo; Prev</a>
+        {% endif %}
+        <span>Page {{ sales.page }} of {{ sales.pages }}</span>
+        {% if sales.has_next %}
+            <a href="?page={{ sales.next_num }}" class="btn btn-sm">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Sale Detail Modal -->
+<div class="modal" id="sale-modal">
+    <div class="modal-content receipt-content">
+        <div id="sale-detail"></div>
+        <div class="modal-actions">
+            <button class="btn" onclick="document.getElementById('sale-modal').classList.remove('open')">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CURRENCY = "{{ currency }}";
+
+function viewSale(id) {
+    fetch(`/api/sales/${id}`)
+    .then(r => r.json())
+    .then(data => {
+        const date = new Date(data.created_at).toLocaleString();
+        let html = `<h3>Receipt: ${data.receipt_number}</h3>
+            <p>${date} | Cashier: ${data.cashier}</p>
+            <table class="receipt-table">
+                <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>`;
+        data.items.forEach(i => {
+            html += `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${CURRENCY}${i.unit_price.toFixed(2)}</td><td>${CURRENCY}${i.subtotal.toFixed(2)}</td></tr>`;
+        });
+        html += `</tbody></table><hr>
+            <p>Subtotal: ${CURRENCY}${data.subtotal.toFixed(2)}</p>`;
+        if (data.tax_amount > 0) html += `<p>Tax: ${CURRENCY}${data.tax_amount.toFixed(2)}</p>`;
+        if (data.discount_amount > 0) html += `<p>Discount: -${CURRENCY}${data.discount_amount.toFixed(2)}</p>`;
+        html += `<p><strong>Total: ${CURRENCY}${data.total.toFixed(2)}</strong></p>
+            <p>Payment: ${data.payment_method}</p>`;
+        if (data.note) html += `<p>Note: ${data.note}</p>`;
+        document.getElementById("sale-detail").innerHTML = html;
+        document.getElementById("sale-modal").classList.add("open");
+    });
+}
+</script>
+{% endblock %}

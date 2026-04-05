@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Manage Users - {{ business_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="admin-header">
+        <h1>Users</h1>
+        <button class="btn btn-primary" onclick="openUserForm()">+ Add User</button>
+    </div>
+
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Display Name</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr class="{% if not u.is_active_user %}row-inactive{% endif %}">
+                <td>{{ u.username }}</td>
+                <td>{{ u.display_name }}</td>
+                <td>{{ u.role }}</td>
+                <td>{{ "Active" if u.is_active_user else "Inactive" }}</td>
+                <td>
+                    <button class="btn btn-sm" onclick='editUser({{ u | tojson }})'>Edit</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- User Form Modal -->
+<div class="modal" id="user-modal">
+    <div class="modal-content">
+        <h2 id="user-form-title">Add User</h2>
+        <form id="user-form">
+            <input type="hidden" id="uf-id">
+            <div class="form-group">
+                <label>Username *</label>
+                <input type="text" id="uf-username" required>
+            </div>
+            <div class="form-group">
+                <label>Display Name *</label>
+                <input type="text" id="uf-display" required>
+            </div>
+            <div class="form-group">
+                <label>Password <span id="pw-hint">(required)</span></label>
+                <input type="password" id="uf-password">
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="uf-role">
+                    <option value="cashier">Cashier</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="uf-active" checked> Active</label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeUserModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save User</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openUserForm(data) {
+    document.getElementById("user-form-title").textContent = data ? "Edit User" : "Add User";
+    document.getElementById("uf-id").value = data?.id || "";
+    document.getElementById("uf-username").value = data?.username || "";
+    document.getElementById("uf-display").value = data?.display_name || "";
+    document.getElementById("uf-password").value = "";
+    document.getElementById("uf-role").value = data?.role || "cashier";
+    document.getElementById("uf-active").checked = data?.is_active_user !== false;
+    document.getElementById("pw-hint").textContent = data ? "(leave blank to keep)" : "(required)";
+    document.getElementById("user-modal").classList.add("open");
+}
+
+function editUser(data) { openUserForm(data); }
+
+function closeUserModal() {
+    document.getElementById("user-modal").classList.remove("open");
+}
+
+document.getElementById("user-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const id = document.getElementById("uf-id").value;
+    const password = document.getElementById("uf-password").value;
+    if (!id && !password) { alert("Password is required for new users."); return; }
+
+    fetch("/admin/users/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: id || null,
+            username: document.getElementById("uf-username").value,
+            display_name: document.getElementById("uf-display").value,
+            password: password || null,
+            role: document.getElementById("uf-role").value,
+            is_active: document.getElementById("uf-active").checked,
+        }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert(data.error); return; }
+        location.reload();
+    });
+});
+</script>
+{% endblock %}

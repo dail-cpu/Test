@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Reports - {{ business_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="admin-header">
+        <h1>Reports</h1>
+        <div>
+            <select id="period-select" onchange="loadReport()">
+                <option value="1">Today</option>
+                <option value="7" selected>Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Revenue</div>
+            <div class="stat-value" id="stat-revenue">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Gross Profit</div>
+            <div class="stat-value" id="stat-profit">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Transactions</div>
+            <div class="stat-value" id="stat-transactions">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Items Sold</div>
+            <div class="stat-value" id="stat-items">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Avg Sale</div>
+            <div class="stat-value" id="stat-avg">-</div>
+        </div>
+    </div>
+
+    <div class="report-sections">
+        <div class="report-section">
+            <h2>Daily Revenue</h2>
+            <table class="admin-table" id="daily-table">
+                <thead><tr><th>Date</th><th>Revenue</th><th>Transactions</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>Top Products</h2>
+            <table class="admin-table" id="products-table">
+                <thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>Payment Methods</h2>
+            <table class="admin-table" id="payments-table">
+                <thead><tr><th>Method</th><th>Count</th><th>Total</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CURRENCY = "{{ currency }}";
+
+function loadReport() {
+    const days = document.getElementById("period-select").value;
+    fetch(`/api/reports/summary?days=${days}`)
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("stat-revenue").textContent = CURRENCY + data.total_revenue.toFixed(2);
+        document.getElementById("stat-profit").textContent = CURRENCY + data.gross_profit.toFixed(2);
+        document.getElementById("stat-transactions").textContent = data.transaction_count;
+        document.getElementById("stat-items").textContent = data.items_sold;
+        document.getElementById("stat-avg").textContent = CURRENCY + data.average_sale.toFixed(2);
+
+        // Daily
+        document.querySelector("#daily-table tbody").innerHTML = data.daily.map(d =>
+            `<tr><td>${d.date}</td><td>${CURRENCY}${d.revenue.toFixed(2)}</td><td>${d.transactions}</td></tr>`
+        ).join("") || "<tr><td colspan='3'>No data</td></tr>";
+
+        // Top products
+        document.querySelector("#products-table tbody").innerHTML = data.top_products.map(p =>
+            `<tr><td>${p.name}</td><td>${p.qty}</td><td>${CURRENCY}${p.revenue.toFixed(2)}</td></tr>`
+        ).join("") || "<tr><td colspan='3'>No data</td></tr>";
+
+        // Payment methods
+        document.querySelector("#payments-table tbody").innerHTML = data.payment_methods.map(p =>
+            `<tr><td>${p.method}</td><td>${p.count}</td><td>${CURRENCY}${p.total.toFixed(2)}</td></tr>`
+        ).join("") || "<tr><td colspan='3'>No data</td></tr>";
+    });
+}
+
+loadReport();
+</script>
+{% endblock %}

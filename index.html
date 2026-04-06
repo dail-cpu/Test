@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Filibusterismo - The Jeweler's Revenge</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: monospace;
+        }
+        #game-container {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <script src="src/utils/constants.js"></script>
+    <script src="src/sprites/portraits.js"></script>
+    <script src="src/sprites/characters.js"></script>
+    <script src="src/utils/dialogue.js"></script>
+    <script src="src/utils/levelbuilder.js"></script>
+    <script src="src/scenes/BootScene.js"></script>
+    <script src="src/scenes/TitleScene.js"></script>
+    <script src="src/scenes/Stage1_Intro.js"></script>
+    <script src="src/scenes/Stage2_Graveyard.js"></script>
+    <script src="src/scenes/Stage3_School.js"></script>
+    <script src="src/scenes/Stage4_Tales.js"></script>
+    <script src="src/scenes/Stage5_Trial.js"></script>
+    <script src="src/scenes/Stage6_Reception.js"></script>
+    <script src="src/scenes/Stage7A_Isagani.js"></script>
+    <script src="src/scenes/Stage7B_Simoun.js"></script>
+    <script src="src/scenes/EndingScene.js"></script>
+    <script src="src/main.js"></script>
+</body>
+</html>

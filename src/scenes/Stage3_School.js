@@ -569,9 +569,14 @@ class Stage3_School extends Phaser.Scene {
             this.player.setVelocityX(0);
         }
 
-        // Jump (only on floor, minimal platforming)
-        if ((this.cursors.up.isDown || this.keyW.isDown) && onFloor) {
-            this.player.setVelocityY(this.player.jumpForce);
+        // Jump (with double jump)
+        var jumpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
+            Phaser.Input.Keyboard.JustDown(this.keyW);
+        LevelBuilder.handleJump(this.player, jumpPressed);
+        LevelBuilder.updateWalkAnimation(this.player, time);
+        if (onFloor) {
+            this.player.jumpCount = 0;
+            this.player.hasDoubleJumped = false;
         }
 
         // -- NPC proximity check --

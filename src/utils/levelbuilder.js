@@ -130,6 +130,16 @@ class LevelBuilder {
         player.dashCooldownTimer = null;
         player.facingRight = true;
 
+        // Double jump
+        player.canDoubleJump = true;
+        player.hasDoubleJumped = false;
+        player.jumpCount = 0;
+        player.maxJumps = 2;
+
+        // Walk animation state
+        player.walkTimer = 0;
+        player.isMoving = false;
+
         return player;
     }
 
@@ -662,5 +672,61 @@ class LevelBuilder {
             dash: dash,
             fireballs: fireballs
         };
+    }
+
+    // --------------------------------------------------------
+    // 13. handleJump(player, jumpKeys)
+    //     Handles single + double jump logic.
+    //     Call from scene update(). jumpKeys = { up, space, w }
+    //     Returns true if a jump was triggered.
+    // --------------------------------------------------------
+    static handleJump(player, isJumpPressed) {
+        if (!isJumpPressed) return false;
+
+        if (player.body.onFloor()) {
+            // First jump from ground
+            player.setVelocityY(player.jumpForce || PLAYER_JUMP);
+            player.jumpCount = 1;
+            player.hasDoubleJumped = false;
+            return true;
+        } else if (player.jumpCount < player.maxJumps && !player.hasDoubleJumped) {
+            // Double jump in air
+            player.setVelocityY((player.jumpForce || PLAYER_JUMP) * 0.85);
+            player.jumpCount = 2;
+            player.hasDoubleJumped = true;
+            return true;
+        }
+        return false;
+    }
+
+    // --------------------------------------------------------
+    // 14. updateWalkAnimation(player, delta)
+    //     Adds walk bob + leg visual. Call from scene update().
+    // --------------------------------------------------------
+    static updateWalkAnimation(player, time) {
+        if (!player || !player.active) return;
+
+        var moving = Math.abs(player.body.velocity.x) > 10;
+        var onFloor = player.body.onFloor();
+
+        if (moving && onFloor) {
+            // Bob up and down while walking
+            player.walkTimer = (player.walkTimer || 0) + 0.15;
+            var bob = Math.sin(player.walkTimer * 8) * 1.5;
+            player.setScale(1, 1 + bob * 0.02);
+            // Slight squash/stretch
+            if (Math.sin(player.walkTimer * 8) > 0.8) {
+                player.setScale(1.05, 0.95);
+            } else {
+                player.setScale(1, 1);
+            }
+        } else if (!onFloor) {
+            // In air - slight upward tilt
+            player.setScale(0.95, 1.05);
+        } else {
+            // Idle
+            player.setScale(1, 1);
+            player.walkTimer = 0;
+        }
     }
 }

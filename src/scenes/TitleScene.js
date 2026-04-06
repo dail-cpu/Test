@@ -273,7 +273,7 @@ class TitleScene extends Phaser.Scene {
         // Control lines
         var controls = [
             ['Arrow Keys / WASD', 'Move'],
-            ['SPACE / W / UP', 'Jump'],
+            ['SPACE / W / UP', 'Jump (press twice for double jump)'],
             ['SHIFT', 'Dash'],
             ['X / J', 'Melee Attack (Walking Stick)'],
             ['C / K', 'Ranged Attack (Lantern Fire)'],

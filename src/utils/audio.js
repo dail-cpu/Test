@@ -9,6 +9,7 @@ var AudioManager = (function () {
     var musicGain = null;
     var sfxGain = null;
     var musicPlaying = false;
+    var musicToken = 0;
     var musicOscillators = [];
 
     function init() {
@@ -177,8 +178,12 @@ var AudioManager = (function () {
     // === MUSIC ===
     // Simple looping melody using oscillators
     function startMusic(stage) {
-        if (!ensureContext() || musicPlaying) return;
+        if (!ensureContext()) return;
+        // Stop previous music before starting new
+        stopMusic();
         musicPlaying = true;
+        musicToken++;
+        var myToken = musicToken;
 
         // Different melodies per stage type
         var melodies = {
@@ -195,7 +200,7 @@ var AudioManager = (function () {
         var noteLength = 60000 / bpm / 2; // 16th notes at ~140bpm
 
         function playNote() {
-            if (!musicPlaying) return;
+            if (!musicPlaying || myToken !== musicToken) return;
             var freq = melody[noteIndex % melody.length];
             if (freq > 0) {
                 var osc = ctx.createOscillator();

@@ -109,7 +109,12 @@ class LevelBuilder {
         var speed = config.speed !== undefined ? config.speed : PLAYER_SPEED;
         var jumpForce = config.jumpForce !== undefined ? config.jumpForce : PLAYER_JUMP;
 
-        var player = this.scene.physics.add.sprite(x, y, spriteKey);
+        // Use the animated spritesheet if available, otherwise fall back to static
+        var actualKey = spriteKey;
+        if (this.scene.textures.exists(spriteKey + '_sheet')) {
+            actualKey = spriteKey + '_sheet';
+        }
+        var player = this.scene.physics.add.sprite(x, y, actualKey);
         player.setCollideWorldBounds(true);
         player.body.setGravityY(GRAVITY);
 

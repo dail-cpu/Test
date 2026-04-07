@@ -100,6 +100,9 @@ class Stage6_Reception extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;
 
+        // Night music for the streets
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('night');
+
         this.levelBuilder.createStageTitle('Chapter VI: The Lamp', "Simoun's terrible gift").then(function () {
             self.dialogueManager.startDialogue([
                 { speaker: 'narrator', name: 'Narrator', text: "The wedding reception of Paulita Gomez and Juanito Pelaez was to be the grandest event of the season. And Simoun had prepared a very special gift..." },
@@ -169,6 +172,7 @@ class Stage6_Reception extends Phaser.Scene {
         if (player.isInvincible) return;
         player.health--;
         this.healthUI.update();
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxHit();
         if (player.health <= 0) { this.playerDeath(); return; }
         player.isInvincible = true;
         this.tweens.add({
@@ -183,10 +187,14 @@ class Stage6_Reception extends Phaser.Scene {
         fireball.destroy();
         enemy.health = (enemy.health || 2) - FIRE_DAMAGE;
         this.tweens.add({ targets: enemy, alpha: 0.3, duration: 80, yoyo: true, repeat: 2 });
-        if (enemy.health <= 0) enemy.destroy();
+        if (enemy.health <= 0) {
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxEnemyDeath();
+            enemy.destroy();
+        }
     }
 
     playerDeath() {
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxGameOver();
         this.gameStarted = false;
         this.player.body.moves = false;
         this.cameras.main.shake(300, 0.02);
@@ -199,6 +207,7 @@ class Stage6_Reception extends Phaser.Scene {
     onReachGoal() {
         if (this.goalReached) return;
         this.goalReached = true;
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxStageComplete();
         this.gameStarted = false;
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;

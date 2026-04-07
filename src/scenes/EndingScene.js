@@ -19,6 +19,9 @@ class EndingScene extends Phaser.Scene {
     create() {
         var self = this;
 
+        // Gentle title music for the ending
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('title');
+
         // Full black background
         this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1);
 

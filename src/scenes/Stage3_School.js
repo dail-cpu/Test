@@ -87,6 +87,9 @@ class Stage3_School extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.dialogueActive = true;
 
+        // Calm day music for school
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('day');
+
         this.lb.createStageTitle(
             'Chapter III: The Academy of Spanish',
             'Isagani fights for education'
@@ -512,6 +515,7 @@ class Stage3_School extends Phaser.Scene {
     completeStage() {
         if (this.stageComplete) return;
         this.stageComplete = true;
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxStageComplete();
 
         var self = this;
 

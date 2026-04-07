@@ -17,6 +17,9 @@ class TitleScene extends Phaser.Scene {
         this.showingControls = false;
         this.showingStageSelect = false;
 
+        // Start title music
+        if (typeof AudioManager !== 'undefined') { AudioManager.stopMusic(); AudioManager.startMusic('title'); }
+
         // -- Background: dark night sky gradient --
         this.createBackground();
 
@@ -500,6 +503,7 @@ class TitleScene extends Phaser.Scene {
     activateMenuItem(index) {
         switch (index) {
             case 0: // New Game
+                if (typeof AudioManager !== 'undefined') { AudioManager.stopMusic(); AudioManager.startMusic('day'); }
                 this.scene.start(STAGES.STAGE1);
                 break;
             case 1: // Stage Select

@@ -91,6 +91,9 @@ class Stage7B_Simoun extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;
 
+        // Action music for the gauntlet
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('action');
+
         this.levelBuilder.createStageTitle('Chapter VII: Revolution', 'Simoun unleashed').then(function () {
             self.dialogueManager.startDialogue([
                 { speaker: 'simoun', name: 'Simoun', text: "No more hiding. No more scheming in the shadows. Tonight, the revolution begins with FIRE." },
@@ -227,6 +230,8 @@ class Stage7B_Simoun extends Phaser.Scene {
             { speaker: 'isagani', name: 'Isagani', text: "Paulita is in there! I will stop you, even if it costs me my life!" },
             { speaker: 'simoun', name: 'Simoun', text: "Then stand aside or face the consequences, boy." }
         ], function () {
+            // Switch to boss music
+            if (typeof AudioManager !== 'undefined') AudioManager.startMusic('boss');
             self.gameStarted = true;
             self.player.body.moves = true;
             self.boss.isActive = true;
@@ -243,6 +248,7 @@ class Stage7B_Simoun extends Phaser.Scene {
     onBossDefeated() {
         this.bossDefeated = true;
         this.boss.isActive = false;
+        if (typeof AudioManager !== 'undefined') { AudioManager.sfxExplosion(); AudioManager.sfxStageComplete(); AudioManager.stopMusic(); }
         this.gameStarted = false;
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;
@@ -276,6 +282,7 @@ class Stage7B_Simoun extends Phaser.Scene {
         if (player.isInvincible) return;
         player.health--;
         this.healthUI.update();
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxHit();
         if (player.health <= 0) { this.playerDeath(); return; }
         player.isInvincible = true;
         this.tweens.add({
@@ -289,10 +296,14 @@ class Stage7B_Simoun extends Phaser.Scene {
     onFireballHitEnemy(fireball, enemy) {
         fireball.destroy();
         enemy.health = (enemy.health || 2) - FIRE_DAMAGE;
-        if (enemy.health <= 0) enemy.destroy();
+        if (enemy.health <= 0) {
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxEnemyDeath();
+            enemy.destroy();
+        }
     }
 
     playerDeath() {
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxGameOver();
         this.gameStarted = false;
         this.player.body.moves = false;
         this.cameras.main.shake(300, 0.02);

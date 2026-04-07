@@ -95,6 +95,9 @@ class Stage7A_Isagani extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;
 
+        // Action music - urgent
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('action');
+
         this.levelBuilder.createStageTitle('Chapter VII: The Race Against Time', "Isagani's desperate choice").then(function () {
             self.dialogueManager.startDialogue([
                 { speaker: 'isagani', name: 'Isagani', text: "Paulita is in there! I have to stop that lamp before it's too late!" }
@@ -169,6 +172,7 @@ class Stage7A_Isagani extends Phaser.Scene {
         if (this.carriedLamp) this.carriedLamp.destroy();
 
         // Explosion in water effect
+        if (typeof AudioManager !== 'undefined') { AudioManager.sfxExplosion(); AudioManager.sfxStageComplete(); }
         this.cameras.main.flash(500, 255, 200, 100);
         this.cameras.main.shake(800, 0.03);
 
@@ -203,6 +207,7 @@ class Stage7A_Isagani extends Phaser.Scene {
         this.player.body.moves = false;
 
         // Explosion
+        if (typeof AudioManager !== 'undefined') { AudioManager.sfxExplosion(); AudioManager.sfxGameOver(); }
         this.cameras.main.flash(2000, 255, 100, 0);
         this.cameras.main.shake(2000, 0.05);
 
@@ -237,6 +242,7 @@ class Stage7A_Isagani extends Phaser.Scene {
         if (player.isInvincible) return;
         player.health--;
         this.healthUI.update();
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxHit();
         if (player.health <= 0) { this.playerDeath(); return; }
         player.isInvincible = true;
         this.tweens.add({
@@ -250,10 +256,14 @@ class Stage7A_Isagani extends Phaser.Scene {
     onFireballHitEnemy(fireball, enemy) {
         fireball.destroy();
         enemy.health = (enemy.health || 2) - FIRE_DAMAGE;
-        if (enemy.health <= 0) enemy.destroy();
+        if (enemy.health <= 0) {
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxEnemyDeath();
+            enemy.destroy();
+        }
     }
 
     playerDeath() {
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxGameOver();
         this.gameStarted = false;
         this.player.body.moves = false;
         this.countdownTimer.stop();

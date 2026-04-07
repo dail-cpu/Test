@@ -212,8 +212,13 @@ var DialogueManager = (function () {
             this._typewriterTimer += delta;
             var charsToShow = Math.floor(this._typewriterTimer / (1000 / TYPEWRITER_SPEED));
             if (charsToShow > this._displayedLength) {
+                var prevLength = this._displayedLength;
                 this._displayedLength = Math.min(charsToShow, this._fullText.length);
                 this._bodyText.setText(this._fullText.substring(0, this._displayedLength));
+                // Play dialogue blip sound for newly revealed characters
+                if (this._displayedLength > prevLength && typeof AudioManager !== 'undefined') {
+                    AudioManager.sfxDialogue();
+                }
                 if (this._displayedLength >= this._fullText.length) {
                     this._isTyping = false;
                 }

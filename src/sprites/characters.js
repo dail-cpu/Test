@@ -11,103 +11,168 @@ function createCharacterSprites(scene) {
         g.destroy();
     }
 
-    // Helper: basic humanoid (24x32)
-    function drawHumanoid(g, skin, hairColor, shirtColor, pantsColor, extras) {
+    // Create a spritesheet with 4 frames: idle, walk1, walk2, jump (each 24x32)
+    function makeAnimatedChar(key, skin, hairColor, shirtColor, pantsColor, extras) {
+        var frameW = 24, frameH = 32, frames = 4;
+        var g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+        for (var f = 0; f < frames; f++) {
+            var ox = f * frameW; // x offset for this frame
+            drawHumanoidFrame(g, ox, skin, hairColor, shirtColor, pantsColor, extras, f);
+        }
+
+        g.generateTexture(key + '_sheet', frameW * frames, frameH);
+        g.destroy();
+
+        // Add spritesheet to texture manager
+        scene.textures.get(key + '_sheet').add(0, 0, 0, 0, frameW, frameH);    // idle
+        scene.textures.get(key + '_sheet').add(1, 0, frameW, 0, frameW, frameH);    // walk1
+        scene.textures.get(key + '_sheet').add(2, 0, frameW * 2, 0, frameW, frameH); // walk2
+        scene.textures.get(key + '_sheet').add(3, 0, frameW * 3, 0, frameW, frameH); // jump
+
+        // Create animations
+        scene.anims.create({
+            key: key + '_idle',
+            frames: [{ key: key + '_sheet', frame: 0 }],
+            frameRate: 1,
+            repeat: -1
+        });
+        scene.anims.create({
+            key: key + '_walk',
+            frames: [
+                { key: key + '_sheet', frame: 1 },
+                { key: key + '_sheet', frame: 0 },
+                { key: key + '_sheet', frame: 2 },
+                { key: key + '_sheet', frame: 0 }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+        scene.anims.create({
+            key: key + '_jump',
+            frames: [{ key: key + '_sheet', frame: 3 }],
+            frameRate: 1,
+            repeat: 0
+        });
+
+        // Also create the static sprite for backward compatibility
+        var g2 = scene.make.graphics({ x: 0, y: 0, add: false });
+        drawHumanoidFrame(g2, 0, skin, hairColor, shirtColor, pantsColor, extras, 0);
+        g2.generateTexture(key, frameW, frameH);
+        g2.destroy();
+    }
+
+    // Draw a humanoid at x-offset ox, with frame variation for legs/arms
+    // frame: 0=idle, 1=walk_left_forward, 2=walk_right_forward, 3=jump
+    function drawHumanoidFrame(g, ox, skin, hairColor, shirtColor, pantsColor, extras, frame) {
         extras = extras || {};
+        frame = frame || 0;
+
+        // Leg positions vary by frame
+        var leftLegX, rightLegX, leftLegH, rightLegH, bodyY;
+        if (frame === 0) { // idle
+            leftLegX = 7; rightLegX = 13; leftLegH = 8; rightLegH = 8; bodyY = 0;
+        } else if (frame === 1) { // walk - left leg forward
+            leftLegX = 5; rightLegX = 14; leftLegH = 8; rightLegH = 7; bodyY = -1;
+        } else if (frame === 2) { // walk - right leg forward
+            leftLegX = 8; rightLegX = 12; leftLegH = 7; rightLegH = 8; bodyY = -1;
+        } else { // jump - legs tucked
+            leftLegX = 8; rightLegX = 12; leftLegH = 6; rightLegH = 6; bodyY = -2;
+        }
+
         // Legs/pants
         g.fillStyle(pantsColor, 1);
-        g.fillRect(7, 24, 4, 8);
-        g.fillRect(13, 24, 4, 8);
+        g.fillRect(ox + leftLegX, 24 + bodyY, 4, leftLegH);
+        g.fillRect(ox + rightLegX, 24 + bodyY, 4, rightLegH);
         // Shoes
         g.fillStyle(0x333333, 1);
-        g.fillRect(6, 30, 5, 2);
-        g.fillRect(13, 30, 5, 2);
+        g.fillRect(ox + leftLegX - 1, 30 + bodyY, 5, 2);
+        g.fillRect(ox + rightLegX, 30 + bodyY, 5, 2);
         // Body/shirt
         g.fillStyle(shirtColor, 1);
-        g.fillRect(6, 14, 12, 11);
-        // Arms
-        g.fillRect(3, 14, 4, 9);
-        g.fillRect(17, 14, 4, 9);
+        g.fillRect(ox + 6, 14 + bodyY, 12, 11);
+        // Arms - swing with walk
+        var leftArmY = (frame === 1) ? 13 : (frame === 2) ? 15 : 14;
+        var rightArmY = (frame === 2) ? 13 : (frame === 1) ? 15 : 14;
+        g.fillRect(ox + 3, leftArmY + bodyY, 4, 9);
+        g.fillRect(ox + 17, rightArmY + bodyY, 4, 9);
         // Hands
         g.fillStyle(skin, 1);
-        g.fillRect(3, 22, 4, 3);
-        g.fillRect(17, 22, 4, 3);
+        g.fillRect(ox + 3, leftArmY + 7 + bodyY, 4, 3);
+        g.fillRect(ox + 17, rightArmY + 7 + bodyY, 4, 3);
         // Head
         g.fillStyle(skin, 1);
-        g.fillRoundedRect(6, 2, 12, 13, 3);
+        g.fillRoundedRect(ox + 6, 2 + bodyY, 12, 13, 3);
         // Hair
         g.fillStyle(hairColor, 1);
-        g.fillRect(5, 1, 14, 5);
+        g.fillRect(ox + 5, 1 + bodyY, 14, 5);
         if (extras.longHair) {
-            g.fillRect(4, 4, 3, 8);
-            g.fillRect(17, 4, 3, 8);
+            g.fillRect(ox + 4, 4 + bodyY, 3, 8);
+            g.fillRect(ox + 17, 4 + bodyY, 3, 8);
         }
         // Eyes
         g.fillStyle(0x111111, 1);
-        g.fillRect(8, 7, 2, 2);
-        g.fillRect(14, 7, 2, 2);
+        g.fillRect(ox + 8, 7 + bodyY, 2, 2);
+        g.fillRect(ox + 14, 7 + bodyY, 2, 2);
         // extras
         if (extras.glasses) {
             g.fillStyle(0x4488cc, 0.8);
-            g.fillRect(7, 6, 4, 3);
-            g.fillRect(13, 6, 4, 3);
+            g.fillRect(ox + 7, 6 + bodyY, 4, 3);
+            g.fillRect(ox + 13, 6 + bodyY, 4, 3);
             g.lineStyle(1, 0x333333, 1);
-            g.strokeRect(7, 6, 4, 3);
-            g.strokeRect(13, 6, 4, 3);
+            g.strokeRect(ox + 7, 6 + bodyY, 4, 3);
+            g.strokeRect(ox + 13, 6 + bodyY, 4, 3);
         }
         if (extras.beard) {
             g.fillStyle(0x2a2a2a, 1);
-            g.fillRect(7, 11, 10, 4);
+            g.fillRect(ox + 7, 11 + bodyY, 10, 4);
         }
         if (extras.collar) {
             g.fillStyle(0xffffff, 1);
-            g.fillRect(8, 14, 8, 2);
+            g.fillRect(ox + 8, 14 + bodyY, 8, 2);
         }
         if (extras.bandana) {
             g.fillStyle(0xcc2222, 1);
-            g.fillRect(5, 1, 14, 3);
+            g.fillRect(ox + 5, 1 + bodyY, 14, 3);
         }
         if (extras.hat) {
             g.fillStyle(extras.hatColor || 0x1a1a44, 1);
-            g.fillRect(3, 0, 18, 4);
-            g.fillRect(6, -1, 12, 2);
+            g.fillRect(ox + 3, 0 + bodyY, 18, 4);
+            g.fillRect(ox + 6, -1 + bodyY, 12, 2);
         }
         if (extras.fat) {
             g.fillStyle(shirtColor, 1);
-            g.fillRect(4, 14, 16, 13);
+            g.fillRect(ox + 4, 14 + bodyY, 16, 13);
         }
         if (extras.tonsure) {
             g.fillStyle(0xeeddcc, 1);
-            g.fillRect(8, 1, 8, 3);
+            g.fillRect(ox + 8, 1 + bodyY, 8, 3);
         }
         if (extras.whiteHair) {
             g.fillStyle(0xcccccc, 1);
-            g.fillRect(5, 1, 14, 5);
+            g.fillRect(ox + 5, 1 + bodyY, 14, 5);
         }
     }
 
-    // ========== PLAYABLE CHARACTERS ==========
+    // Legacy static humanoid (for NPCs and enemies that don't animate)
+    function drawHumanoid(g, skin, hairColor, shirtColor, pantsColor, extras) {
+        drawHumanoidFrame(g, 0, skin, hairColor, shirtColor, pantsColor, extras, 0);
+    }
+
+    // ========== PLAYABLE CHARACTERS (animated spritesheets) ==========
 
     // Simoun - dark suit, blue glasses, beard
-    makeTex('sprite_simoun', 24, 32, function(g) {
-        drawHumanoid(g, 0x8B6914, 0x1a1a1a, 0x1a1a2e, 0x1a1a2e,
-            { glasses: true, beard: true, longHair: true, collar: true });
-    });
+    makeAnimatedChar('sprite_simoun', 0x8B6914, 0x1a1a1a, 0x1a1a2e, 0x1a1a2e,
+        { glasses: true, beard: true, longHair: true, collar: true });
 
     // Isagani - barong tagalog, young
-    makeTex('sprite_isagani', 24, 32, function(g) {
-        drawHumanoid(g, 0xC6A664, 0x1a1a1a, 0xd4c8a8, 0x3a3a3a, {});
-    });
+    makeAnimatedChar('sprite_isagani', 0xC6A664, 0x1a1a1a, 0xd4c8a8, 0x3a3a3a, {});
 
     // Cabesang Tales - farmer
-    makeTex('sprite_tales', 24, 32, function(g) {
-        drawHumanoid(g, 0x8B6914, 0x444444, 0x6b5a3a, 0x4a3a2a, {});
-    });
+    makeAnimatedChar('sprite_tales', 0x8B6914, 0x444444, 0x6b5a3a, 0x4a3a2a, {});
 
     // Cabesang Tales as bandit
-    makeTex('sprite_tales_bandit', 24, 32, function(g) {
-        drawHumanoid(g, 0x8B6914, 0x444444, 0x3a2a1a, 0x2a2a2a, { bandana: true });
-    });
+    makeAnimatedChar('sprite_tales_bandit', 0x8B6914, 0x444444, 0x3a2a1a, 0x2a2a2a, { bandana: true });
 
     // ========== ENEMIES ==========
 

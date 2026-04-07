@@ -24,6 +24,9 @@ class BootScene extends Phaser.Scene {
         // Generate particle textures used by various effects
         this.createParticleTextures();
 
+        // Initialize audio system
+        if (typeof AudioManager !== 'undefined') AudioManager.init();
+
         // Proceed to the title screen
         this.scene.start('TitleScene');
     }

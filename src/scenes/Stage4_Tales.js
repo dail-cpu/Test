@@ -97,6 +97,9 @@ class Stage4_Tales extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;
 
+        // Action music for Tales' stage
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('action');
+
         this.levelBuilder.createStageTitle('Chapter IV: The Stolen Land', "Cabesang Tales' desperate stand").then(function () {
             self.dialogueManager.startDialogue([
                 { speaker: 'narrator', name: 'Narrator', text: "In the countryside, Cabesang Tales — once a proud landowner — watched helplessly as the friars seized his ancestral land through corrupt courts." },
@@ -174,6 +177,7 @@ class Stage4_Tales extends Phaser.Scene {
         if (player.isInvincible) return;
         player.health--;
         this.healthUI.update();
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxHit();
         if (player.health <= 0) { this.playerDeath(); return; }
         player.isInvincible = true;
         this.tweens.add({
@@ -189,11 +193,13 @@ class Stage4_Tales extends Phaser.Scene {
         enemy.health = (enemy.health || 2) - FIRE_DAMAGE;
         this.tweens.add({ targets: enemy, alpha: 0.3, duration: 80, yoyo: true, repeat: 2 });
         if (enemy.health <= 0) {
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxEnemyDeath();
             enemy.destroy();
         }
     }
 
     playerDeath() {
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxGameOver();
         this.gameStarted = false;
         this.player.body.moves = false;
         this.cameras.main.shake(300, 0.02);
@@ -206,6 +212,7 @@ class Stage4_Tales extends Phaser.Scene {
     onReachGoal() {
         if (this.goalReached) return;
         this.goalReached = true;
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxStageComplete();
         this.gameStarted = false;
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;

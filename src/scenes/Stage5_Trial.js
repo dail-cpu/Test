@@ -79,6 +79,9 @@ class Stage5_Trial extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;
 
+        // Night music for the crackdown
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('night');
+
         this.levelBuilder.createStageTitle('Chapter V: The Crackdown', 'The death of the academy dream').then(function () {
             self.startPhase1Dialogue();
         });
@@ -154,6 +157,8 @@ class Stage5_Trial extends Phaser.Scene {
         this.gameStarted = true;
         this.player.body.moves = true;
         this.objective.update('Escape the Guardia Civil!');
+        // Switch to action music for escape
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('action');
 
         // Enable enemies
         this.enemies.getChildren().forEach(function (e) {
@@ -174,6 +179,7 @@ class Stage5_Trial extends Phaser.Scene {
         if (player.isInvincible || this.phase !== 2) return;
         player.health--;
         this.healthUI.update();
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxHit();
         if (player.health <= 0) { this.playerDeath(); return; }
         player.isInvincible = true;
         this.tweens.add({
@@ -188,10 +194,14 @@ class Stage5_Trial extends Phaser.Scene {
         fireball.destroy();
         enemy.health = (enemy.health || 2) - FIRE_DAMAGE;
         this.tweens.add({ targets: enemy, alpha: 0.3, duration: 80, yoyo: true, repeat: 2 });
-        if (enemy.health <= 0) enemy.destroy();
+        if (enemy.health <= 0) {
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxEnemyDeath();
+            enemy.destroy();
+        }
     }
 
     playerDeath() {
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxGameOver();
         this.gameStarted = false;
         this.player.body.moves = false;
         this.cameras.main.shake(300, 0.02);
@@ -204,6 +214,7 @@ class Stage5_Trial extends Phaser.Scene {
     onReachGoal() {
         if (this.goalReached || this.phase !== 2) return;
         this.goalReached = true;
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxStageComplete();
         this.gameStarted = false;
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;

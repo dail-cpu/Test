@@ -172,6 +172,9 @@ class Stage1_Intro extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;
 
+        // Start stage music
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('day');
+
         this.levelBuilder.createStageTitle(
             'Chapter I: The Return',
             'Simoun arrives in the Philippines'
@@ -493,6 +496,7 @@ class Stage1_Intro extends Phaser.Scene {
 
         enemy.health -= FIRE_DAMAGE;
         if (enemy.health <= 0) {
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxEnemyDeath();
             // Death flash
             this.tweens.add({
                 targets: enemy,
@@ -523,6 +527,7 @@ class Stage1_Intro extends Phaser.Scene {
         this.player.health -= amount;
         this.player.isInvincible = true;
         this.healthUI.update();
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxHit();
 
         // Knockback
         var kbDir = this.player.facingRight ? -1 : 1;
@@ -553,6 +558,7 @@ class Stage1_Intro extends Phaser.Scene {
     }
 
     onPlayerDeath() {
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxGameOver();
         this.player.active = false;
         this.player.body.moves = false;
         this.player.setAlpha(0.4);
@@ -611,6 +617,7 @@ class Stage1_Intro extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.player.body.moves = false;
         this.objective.complete();
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxStageComplete();
 
         var self = this;
 

@@ -290,6 +290,7 @@ class LevelBuilder {
             increment: function () {
                 counter.count++;
                 text.setText('x ' + counter.count);
+                if (typeof AudioManager !== 'undefined') AudioManager.sfxCollect();
             },
             getText: function () {
                 return 'x ' + counter.count;
@@ -521,6 +522,9 @@ class LevelBuilder {
         function melee() {
             if (!canMelee || !player.active) return;
             canMelee = false;
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxMelee();
+            player.isMeleeing = true;
+            scene.time.delayedCall(200, function () { player.isMeleeing = false; });
 
             var direction = player.facingRight ? 1 : -1;
             var hitX = player.x + direction * MELEE_RANGE;
@@ -568,6 +572,7 @@ class LevelBuilder {
         function fire() {
             if (!canFire || !player.active) return;
             canFire = false;
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxFire();
 
             var direction = player.facingRight ? 1 : -1;
             var fireball = fireballs.create(
@@ -611,6 +616,7 @@ class LevelBuilder {
             player.canDash = false;
             player.isDashing = true;
             player.isInvincible = true;
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxDash();
 
             var direction = player.facingRight ? 1 : -1;
             player.setVelocityX(PLAYER_DASH_SPEED * direction);
@@ -684,49 +690,60 @@ class LevelBuilder {
         if (!isJumpPressed) return false;
 
         if (player.body.onFloor()) {
-            // First jump from ground
             player.setVelocityY(player.jumpForce || PLAYER_JUMP);
             player.jumpCount = 1;
             player.hasDoubleJumped = false;
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxJump();
             return true;
         } else if (player.jumpCount < player.maxJumps && !player.hasDoubleJumped) {
-            // Double jump in air
             player.setVelocityY((player.jumpForce || PLAYER_JUMP) * 0.85);
             player.jumpCount = 2;
             player.hasDoubleJumped = true;
+            if (typeof AudioManager !== 'undefined') AudioManager.sfxDoubleJump();
             return true;
         }
         return false;
     }
 
     // --------------------------------------------------------
-    // 14. updateWalkAnimation(player, delta)
-    //     Adds walk bob + leg visual. Call from scene update().
+    // 14. updateWalkAnimation(player, time)
+    //     Plays proper frame-based walk/idle/jump animations.
+    //     Requires animated spritesheet created by makeAnimatedChar.
     // --------------------------------------------------------
     static updateWalkAnimation(player, time) {
         if (!player || !player.active) return;
 
         var moving = Math.abs(player.body.velocity.x) > 10;
         var onFloor = player.body.onFloor();
+        var texKey = player.texture.key.replace('_sheet', '');
 
-        if (moving && onFloor) {
-            // Bob up and down while walking
-            player.walkTimer = (player.walkTimer || 0) + 0.15;
-            var bob = Math.sin(player.walkTimer * 8) * 1.5;
-            player.setScale(1, 1 + bob * 0.02);
-            // Slight squash/stretch
-            if (Math.sin(player.walkTimer * 8) > 0.8) {
-                player.setScale(1.05, 0.95);
+        // Try to use spritesheet animations
+        var walkAnim = texKey + '_walk';
+        var idleAnim = texKey + '_idle';
+        var jumpAnim = texKey + '_jump';
+
+        var hasAnims = player.scene.anims.exists(walkAnim);
+
+        if (hasAnims) {
+            if (!onFloor) {
+                // In air
+                if (player.anims.currentAnim && player.anims.currentAnim.key !== jumpAnim) {
+                    player.play(jumpAnim, true);
+                }
+            } else if (moving) {
+                // Walking on ground
+                if (!player.anims.currentAnim || player.anims.currentAnim.key !== walkAnim) {
+                    player.play(walkAnim, true);
+                }
             } else {
-                player.setScale(1, 1);
+                // Idle on ground
+                if (!player.anims.currentAnim || player.anims.currentAnim.key !== idleAnim) {
+                    player.play(idleAnim, true);
+                }
             }
-        } else if (!onFloor) {
-            // In air - slight upward tilt
-            player.setScale(0.95, 1.05);
-        } else {
-            // Idle
-            player.setScale(1, 1);
-            player.walkTimer = 0;
         }
+
+        // Keep scale normal
+        player.setScale(1, 1);
     }
 }

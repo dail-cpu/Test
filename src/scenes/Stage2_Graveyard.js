@@ -87,13 +87,45 @@ class Stage2_Graveyard extends Phaser.Scene {
             this.basilioNPC.body.setGravityY(GRAVITY);
             this.basilioNPC.body.setImmovable(true);
             this.basilioNPC.setFlipX(true);
+            this.basilioNPC.setDepth(500);
 
             this.physics.add.collider(this.basilioNPC, this.platforms);
             this.physics.add.collider(this.basilioNPC, this.gravePlatforms);
             this.physics.add.collider(this.basilioNPC, this.stonePlatforms);
 
+            // Big "!" indicator above Basilio
+            this.basilioIndicator = this.add.text(npcPos.x - 4, npcPos.y - 40, '!', {
+                fontSize: '24px', fontFamily: 'monospace', color: '#ffd700',
+                shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 3, fill: true }
+            }).setDepth(600);
+            this.tweens.add({ targets: this.basilioIndicator, y: npcPos.y - 48, duration: 600, yoyo: true, repeat: -1 });
+
+            // "Basilio" name label
+            this.basilioLabel = this.add.text(npcPos.x, npcPos.y - 28, 'Basilio', {
+                fontSize: '10px', fontFamily: 'monospace', color: '#f0ead6',
+                shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 2, fill: true }
+            }).setOrigin(0.5).setDepth(600);
+
+            // Gravestone decoration next to Basilio (Sisa's grave)
+            var graveX = npcPos.x + 30;
+            var graveY = npcPos.y + 4;
+            this.sisaGrave = this.add.image(graveX, graveY, 'tile_grave').setDepth(100).setScale(1.5);
+            // "Sisa" text on the grave
+            this.add.text(graveX, graveY - 20, 'SISA', {
+                fontSize: '8px', fontFamily: 'monospace', color: '#999999'
+            }).setOrigin(0.5).setDepth(101);
+            // Candle glow near grave
+            var candle = this.add.circle(graveX - 10, graveY + 10, 6, 0xffaa33, 0.4).setDepth(99);
+            this.tweens.add({ targets: candle, alpha: 0.15, scaleX: 0.7, scaleY: 0.7, duration: 500, yoyo: true, repeat: -1 });
+
             // Overlap zone to trigger dialogue
             this.physics.add.overlap(this.player, this.basilioNPC, this.onReachBasilio, null, this);
+
+            // Direction arrow pointing toward Basilio (updates in update loop)
+            this.dirArrow = this.add.text(GAME_WIDTH - 60, GAME_HEIGHT / 2, '>>>', {
+                fontSize: '16px', fontFamily: 'monospace', color: '#ffd700'
+            }).setScrollFactor(0).setDepth(800).setAlpha(0.7);
+            this.tweens.add({ targets: this.dirArrow, x: GAME_WIDTH - 50, duration: 500, yoyo: true, repeat: -1 });
         }
 
         // -------------------------------------------------------
@@ -143,6 +175,9 @@ class Stage2_Graveyard extends Phaser.Scene {
         // -------------------------------------------------------
         this.playerControlEnabled = false;
 
+        // Night music for graveyard
+        if (typeof AudioManager !== 'undefined') AudioManager.startMusic('night');
+
         var self = this;
         this.lb.createStageTitle('Chapter II: Sisa\'s Grave', 'The graveyard at midnight').then(function () {
             self.dialogue.startDialogue([
@@ -164,8 +199,8 @@ class Stage2_Graveyard extends Phaser.Scene {
     // ===========================================================
     getLevelMap() {
         // DESIGN: Graveyard at night. Ground at row 12-13.
-        // Platforms staircase up max 2 tiles at a time, double jump covers 5 tiles.
-        // Basilio NPC at far right on ground level.
+        // Basilio NPC clearly at far right on solid ground with path to him.
+        // Gradual left-to-right progression, stepping up 1-2 tiles max.
         return [
             '....................................................................................................', // 0
             '....................................................................................................', // 1
@@ -174,13 +209,13 @@ class Stage2_Graveyard extends Phaser.Scene {
             '....................................................................................................', // 4
             '....................................................................................................', // 5
             '....................................................................................................', // 6
-            '.......................................T........................................T....................', // 7
-            '............................T.....####....E....T.........T.....####.......T.....####................', // 8
-            '....................T....####..........######.....####.......####....####.....####...................', // 9
-            '..........T.E.....###..........E.....######....######..E..######..######...######.........T........', // 10
-            '..P.....#####...#####...T...########.######..########...########.#######..########........###..N...', // 11
-            '######.######..######..###.########################################################...##.####.####', // 12
-            '######.######.#######.####.########################################################..###.#########', // 13
+            '....................................................................................................', // 7
+            '...........................T.........................................T...............................', // 8
+            '...................T....####...E.....T........T......####...E.....T.....####........................', // 9
+            '..........T.E....###..######.......####.....####....######......####...######.......T...............', // 10
+            '..P.....#####...#####.######..T..######...######...########...######..########....#####....N.......', // 11
+            '######.######..######.######.###.########.########.########..########.########...######.#####.#####', // 12
+            '######.######.#######.######.###.########.########.########.#########.########..#######.###########', // 13
             '############################################################################################################', // 14
             '############################################################################################################', // 15
             '############################################################################################################'  // 16
@@ -423,6 +458,13 @@ class Stage2_Graveyard extends Phaser.Scene {
         // Walk animation
         LevelBuilder.updateWalkAnimation(this.player, time);
 
+        // Hide direction arrow when near Basilio
+        if (this.dirArrow && this.basilioNPC) {
+            if (Math.abs(this.player.x - this.basilioNPC.x) < 200) {
+                this.dirArrow.setVisible(false);
+            }
+        }
+
         // Reset jump count on ground
         if (onGround) {
             this.player.jumpCount = 0;
@@ -492,6 +534,7 @@ class Stage2_Graveyard extends Phaser.Scene {
         if (player.isInvincible) return;
         player.health--;
         player.isInvincible = true;
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxHit();
 
         // Knockback
         var knockDir = (player.x < enemy.x) ? -1 : 1;
@@ -554,6 +597,7 @@ class Stage2_Graveyard extends Phaser.Scene {
             particles.explode(6);
             this.time.delayedCall(400, function () { particles.destroy(); });
         }
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxEnemyDeath();
         enemy.destroy();
     }
 
@@ -574,6 +618,7 @@ class Stage2_Graveyard extends Phaser.Scene {
     onPlayerDeath() {
         if (this.isDead) return;
         this.isDead = true;
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxGameOver();
 
         this.player.setVelocity(0, 0);
         this.player.body.setAllowGravity(false);
@@ -629,6 +674,7 @@ class Stage2_Graveyard extends Phaser.Scene {
         player.setVelocityY(0);
 
         this.objective.complete();
+        if (typeof AudioManager !== 'undefined') AudioManager.sfxStageComplete();
 
         var self = this;
         this.dialogue.startDialogue([

@@ -73,6 +73,9 @@ class Stage7A_Isagani extends Phaser.Scene {
             }
         }
 
+        // Environment decor
+        this.levelBuilder.drawEnvironmentDecor('city_night', this.WORLD_WIDTH);
+
         // UI
         this.healthUI = this.levelBuilder.createHealthUI(this.player);
         this.objective = this.levelBuilder.createObjective('Reach the lamp! HURRY!');

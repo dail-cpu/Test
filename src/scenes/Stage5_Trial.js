@@ -64,6 +64,9 @@ class Stage5_Trial extends Phaser.Scene {
         this.healthUI = this.levelBuilder.createHealthUI(this.player);
         this.objective = this.levelBuilder.createObjective('Listen to the proceedings');
 
+        // Environment decor
+        this.levelBuilder.drawEnvironmentDecor('city_night', this.WORLD_WIDTH);
+
         // Camera
         this.levelBuilder.setupCamera(this.player, this.WORLD_WIDTH, this.WORLD_HEIGHT);
 

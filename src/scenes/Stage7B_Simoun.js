@@ -73,6 +73,9 @@ class Stage7B_Simoun extends Phaser.Scene {
         this.physics.add.collider(this.treasures, this.platforms);
         this.physics.add.overlap(this.player, this.treasures, this.collectTreasure, null, this);
 
+        // Environment decor
+        this.levelBuilder.drawEnvironmentDecor('city_night', this.WORLD_WIDTH);
+
         // UI
         this.healthUI = this.levelBuilder.createHealthUI(this.player);
         this.objective = this.levelBuilder.createObjective('Fight through the reception!');

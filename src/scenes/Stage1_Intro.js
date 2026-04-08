@@ -52,6 +52,9 @@ class Stage1_Intro extends Phaser.Scene {
         // Add variety tiles on top of grass base — stone and wood platforms
         this.addTileVariety();
 
+        // Environment decorations
+        this.levelBuilder.drawEnvironmentDecor('coastal', this.WORLD_WIDTH);
+
         // -------------------------------------------------------
         // Player
         // -------------------------------------------------------
@@ -97,6 +100,9 @@ class Stage1_Intro extends Phaser.Scene {
             this.player, this.enemies,
             this.onPlayerEnemyContact, null, this
         );
+
+        // Register enemies for melee hits
+        this.abilities.registerEnemies(this.enemies);
 
         // Fireball-enemy collision
         this.physics.add.overlap(
@@ -564,11 +570,9 @@ class Stage1_Intro extends Phaser.Scene {
         this.player.setAlpha(0.4);
 
         var self = this;
-
-        // Brief delay then restart
         this.cameras.main.fade(800, 0, 0, 0, false, function (cam, progress) {
             if (progress >= 1) {
-                self.scene.restart();
+                self.scene.start(STAGES.GAMEOVER, { stageName: 'Stage1_Intro' });
             }
         });
     }

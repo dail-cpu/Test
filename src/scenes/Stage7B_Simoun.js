@@ -50,6 +50,7 @@ class Stage7B_Simoun extends Phaser.Scene {
         this.physics.add.collider(this.enemies, this.platforms);
         this.physics.add.overlap(this.player, this.enemies, this.onPlayerEnemyContact, null, this);
         this.physics.add.overlap(this.abilities.fireballs, this.enemies, this.onFireballHitEnemy, null, this);
+        this.abilities.registerEnemies(this.enemies);
 
         // Also add some friars as enemies
         if (mapData.npcs && mapData.npcs.length > 0) {
@@ -60,6 +61,7 @@ class Stage7B_Simoun extends Phaser.Scene {
             this.physics.add.collider(this.friarEnemies, this.platforms);
             this.physics.add.overlap(this.player, this.friarEnemies, this.onPlayerEnemyContact, null, this);
             this.physics.add.overlap(this.abilities.fireballs, this.friarEnemies, this.onFireballHitEnemy, null, this);
+            this.abilities.registerEnemies(this.friarEnemies);
         }
 
         // BOSS: Isagani at the end
@@ -309,7 +311,7 @@ class Stage7B_Simoun extends Phaser.Scene {
         this.cameras.main.shake(300, 0.02);
         var self = this;
         this.cameras.main.fade(1000, 0, 0, 0, false, function (cam, progress) {
-            if (progress === 1) self.scene.restart();
+            if (progress === 1) self.scene.start(STAGES.GAMEOVER, { stageName: 'Stage7B_Simoun' });
         });
     }
 

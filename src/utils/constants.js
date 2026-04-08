@@ -93,4 +93,5 @@ const STAGES = {
     STAGE7A: 'Stage7A_Isagani',
     STAGE7B: 'Stage7B_Simoun',
     ENDING: 'EndingScene',
+    GAMEOVER: 'GameOverScene',
 };

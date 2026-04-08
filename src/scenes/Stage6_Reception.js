@@ -29,6 +29,9 @@ class Stage6_Reception extends Phaser.Scene {
         var mapData = this.levelBuilder.createPlatformsFromString(this.getLevelMap(), 'tile_stone');
         this.platforms = mapData.platforms;
 
+        // Environment decorations
+        this.levelBuilder.drawEnvironmentDecor('city_night', this.WORLD_WIDTH);
+
         // Add reception floor tiles in the venue area
         for (var rx = 65; rx < 98; rx++) {
             for (var ry = 13; ry < 14; ry++) {
@@ -56,6 +59,7 @@ class Stage6_Reception extends Phaser.Scene {
         this.physics.add.collider(this.enemies, this.platforms);
         this.physics.add.overlap(this.player, this.enemies, this.onPlayerEnemyContact, null, this);
         this.physics.add.overlap(this.abilities.fireballs, this.enemies, this.onFireballHitEnemy, null, this);
+        this.abilities.registerEnemies(this.enemies);
 
         // Treasures
         this.treasureCounter = this.levelBuilder.createTreasureCounter();
@@ -200,7 +204,7 @@ class Stage6_Reception extends Phaser.Scene {
         this.cameras.main.shake(300, 0.02);
         var self = this;
         this.cameras.main.fade(1000, 0, 0, 0, false, function (cam, progress) {
-            if (progress === 1) self.scene.restart();
+            if (progress === 1) self.scene.start(STAGES.GAMEOVER, { stageName: 'Stage6_Reception' });
         });
     }
 

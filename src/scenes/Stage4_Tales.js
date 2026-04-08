@@ -27,6 +27,9 @@ class Stage4_Tales extends Phaser.Scene {
         var mapData = this.levelBuilder.createPlatformsFromString(this.getLevelMap(), 'tile_grass');
         this.platforms = mapData.platforms;
 
+        // Environment decorations
+        this.levelBuilder.drawEnvironmentDecor('jungle', this.WORLD_WIDTH);
+
         // Player - Cabesang Tales
         var pStart = mapData.playerStart || { x: 80, y: 400 };
         this.player = this.levelBuilder.createPlayer(pStart.x, pStart.y, 'sprite_tales', {
@@ -53,6 +56,7 @@ class Stage4_Tales extends Phaser.Scene {
         this.physics.add.collider(this.enemies, this.platforms);
         this.physics.add.overlap(this.player, this.enemies, this.onPlayerEnemyContact, null, this);
         this.physics.add.overlap(this.abilities.fireballs, this.enemies, this.onFireballHitEnemy, null, this);
+        this.abilities.registerEnemies(this.enemies);
 
         // Juli NPC near start
         if (mapData.npcs && mapData.npcs.length > 0) {
@@ -205,7 +209,7 @@ class Stage4_Tales extends Phaser.Scene {
         this.cameras.main.shake(300, 0.02);
         var self = this;
         this.cameras.main.fade(1000, 0, 0, 0, false, function (cam, progress) {
-            if (progress === 1) { self.scene.restart(); }
+            if (progress === 1) { self.scene.start(STAGES.GAMEOVER, { stageName: 'Stage4_Tales' }); }
         });
     }
 

@@ -221,6 +221,8 @@ class LevelBuilder {
         var enemySpeed = config.speed !== undefined ? config.speed : 60;
         var patrol = config.patrol !== undefined ? config.patrol : true;
         var patrolDistance = config.patrolDistance !== undefined ? config.patrolDistance : 100;
+        var detectRange = config.detectRange !== undefined ? config.detectRange : 220;
+        var chaseMultiplier = config.chaseMultiplier !== undefined ? config.chaseMultiplier : 1.6;
 
         var scene = this.scene;
         var group = scene.physics.add.group();
@@ -237,6 +239,9 @@ class LevelBuilder {
             enemy.patrolDirection = 1;
             enemy.isPatrolling = patrol;
             enemy.originX = pos.x;
+            enemy.detectRange = detectRange;
+            enemy.chaseMultiplier = chaseMultiplier;
+            enemy.isChasing = false;
 
             enemy.body.setGravityY(GRAVITY);
             enemy.body.setCollideWorldBounds(true);
@@ -246,19 +251,37 @@ class LevelBuilder {
             }
         }
 
-        // Add patrol update logic
+        // Smart AI: patrol + chase player when in range
         scene.events.on('update', function () {
+            var player = scene.player;
             group.getChildren().forEach(function (enemy) {
                 if (!enemy.active || !enemy.isPatrolling) return;
 
-                enemy.setVelocityX(enemy.speed * enemy.patrolDirection);
+                var distToPlayer = (player && player.active)
+                    ? Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y)
+                    : 9999;
 
-                if (enemy.patrolDirection === 1 && enemy.x >= enemy.patrolRight) {
-                    enemy.patrolDirection = -1;
-                    enemy.setFlipX(false);
-                } else if (enemy.patrolDirection === -1 && enemy.x <= enemy.patrolLeft) {
-                    enemy.patrolDirection = 1;
-                    enemy.setFlipX(true);
+                if (distToPlayer < enemy.detectRange && player && player.active) {
+                    // Chase mode
+                    enemy.isChasing = true;
+                    var chaseDir = player.x > enemy.x ? 1 : -1;
+                    enemy.setVelocityX(enemy.speed * enemy.chaseMultiplier * chaseDir);
+                    enemy.setFlipX(chaseDir < 0);
+                    // Jump toward player if they're above
+                    if (player.y < enemy.y - 40 && enemy.body.onFloor()) {
+                        enemy.setVelocityY(-320);
+                    }
+                } else {
+                    // Return to patrol
+                    enemy.isChasing = false;
+                    enemy.setVelocityX(enemy.speed * enemy.patrolDirection);
+                    if (enemy.patrolDirection === 1 && enemy.x >= enemy.patrolRight) {
+                        enemy.patrolDirection = -1;
+                        enemy.setFlipX(false);
+                    } else if (enemy.patrolDirection === -1 && enemy.x <= enemy.patrolLeft) {
+                        enemy.patrolDirection = 1;
+                        enemy.setFlipX(true);
+                    }
                 }
             });
         });
@@ -509,6 +532,128 @@ class LevelBuilder {
     }
 
     // --------------------------------------------------------
+    // 11b. drawEnvironmentDecor(type)
+    //      Draws procedural background decorations.
+    //      Types: 'coastal', 'graveyard', 'school', 'jungle',
+    //             'city_night', 'reception'
+    // --------------------------------------------------------
+    drawEnvironmentDecor(type, worldWidth) {
+        var scene = this.scene;
+        var g = scene.add.graphics();
+        g.setDepth(2);
+        var w = worldWidth || 4000;
+
+        if (type === 'coastal') {
+            // Palm trees in background
+            for (var i = 0; i < 10; i++) {
+                var px = 100 + i * (w / 10);
+                var py = 10 * TILE;
+                g.fillStyle(0x3a2a1a, 1);
+                g.fillRect(px, py - 60, 5, 60);
+                g.fillStyle(0x2a6a2a, 0.7);
+                for (var f = -2; f <= 2; f++) {
+                    g.beginPath(); g.moveTo(px + 2, py - 60);
+                    g.lineTo(px + 2 + f * 18, py - 68 - Math.abs(f) * 4);
+                    g.lineTo(px + 2 + f * 18 + (f > 0 ? 5 : -5), py - 60);
+                    g.closePath(); g.fill();
+                }
+            }
+            // Wooden dock posts near ship area
+            for (var d = 85; d < 120; d += 5) {
+                g.fillStyle(0x5a3a1a, 0.6);
+                g.fillRect(d * TILE, 9 * TILE, 4, 4 * TILE);
+            }
+            // Distant sailboat
+            g.fillStyle(0x2a2a3a, 0.3);
+            g.fillRect(60 * TILE, 4 * TILE, 20, 8);
+            g.fillStyle(0xccccbb, 0.2);
+            g.beginPath(); g.moveTo(60 * TILE + 10, 4 * TILE); g.lineTo(60 * TILE + 10, 3 * TILE); g.lineTo(60 * TILE + 25, 4 * TILE); g.closePath(); g.fill();
+        }
+
+        if (type === 'graveyard') {
+            // Gravestones scattered in background
+            for (var gs = 0; gs < 15; gs++) {
+                var gx = Phaser.Math.Between(2, Math.floor(w / TILE) - 5) * TILE;
+                var gy = 11 * TILE + Phaser.Math.Between(-4, 4);
+                g.fillStyle(0x444444, 0.4);
+                g.fillRect(gx, gy, 10, 14);
+                g.fillRoundedRect(gx - 1, gy - 4, 12, 8, 2);
+                // Cross on some
+                if (Math.random() > 0.5) {
+                    g.fillRect(gx + 3, gy - 10, 4, 8);
+                    g.fillRect(gx + 1, gy - 7, 8, 3);
+                }
+            }
+            // Dead trees
+            for (var dt = 0; dt < 6; dt++) {
+                var tx = Phaser.Math.Between(3, Math.floor(w / TILE) - 3) * TILE;
+                g.fillStyle(0x2a2a2a, 0.5);
+                g.fillRect(tx, 7 * TILE, 4, 5 * TILE);
+                g.fillRect(tx - 12, 8 * TILE, 14, 3);
+                g.fillRect(tx + 2, 7 * TILE + 10, 16, 3);
+            }
+            // Wrought iron fence sections
+            g.lineStyle(1, 0x333344, 0.3);
+            for (var fe = 0; fe < w; fe += 60) {
+                g.moveTo(fe, 11 * TILE); g.lineTo(fe, 10 * TILE);
+                g.moveTo(fe, 10 * TILE + 8); g.lineTo(fe + 50, 10 * TILE + 8);
+            }
+            g.strokePath();
+        }
+
+        if (type === 'jungle') {
+            // Dense canopy above
+            for (var jt = 0; jt < 20; jt++) {
+                var jx = Phaser.Math.Between(0, Math.floor(w / TILE)) * TILE;
+                g.fillStyle(0x1a3a1a, 0.3);
+                g.fillCircle(jx, Phaser.Math.Between(2, 5) * TILE, Phaser.Math.Between(30, 60));
+            }
+            // Hanging vines
+            for (var v = 0; v < 12; v++) {
+                var vx = Phaser.Math.Between(2, Math.floor(w / TILE) - 2) * TILE;
+                g.lineStyle(2, 0x1a4a1a, 0.4);
+                g.beginPath(); g.moveTo(vx, 0);
+                var vy2 = Phaser.Math.Between(3, 7) * TILE;
+                g.lineTo(vx + Phaser.Math.Between(-10, 10), vy2);
+                g.strokePath();
+            }
+            // Tall grass tufts
+            for (var tg = 0; tg < 30; tg++) {
+                var tgx = Phaser.Math.Between(0, Math.floor(w / TILE)) * TILE;
+                g.fillStyle(0x2a5a2a, 0.4);
+                g.fillRect(tgx, 11 * TILE, 2, -Phaser.Math.Between(6, 14));
+                g.fillRect(tgx + 4, 11 * TILE, 2, -Phaser.Math.Between(6, 14));
+            }
+        }
+
+        if (type === 'city_night') {
+            // Building silhouettes in background
+            for (var bld = 0; bld < 12; bld++) {
+                var bx = bld * (w / 12);
+                var bh = Phaser.Math.Between(4, 8) * TILE;
+                g.fillStyle(0x0a0a14, 0.5);
+                g.fillRect(bx, 12 * TILE - bh, Phaser.Math.Between(40, 80), bh);
+                // Windows (lit yellow)
+                var winCount = Phaser.Math.Between(2, 5);
+                for (var wi = 0; wi < winCount; wi++) {
+                    if (Math.random() > 0.4) {
+                        g.fillStyle(0xffcc66, 0.15);
+                        g.fillRect(bx + 8 + wi * 14, 12 * TILE - bh + 8 + Math.floor(wi / 2) * 20, 6, 6);
+                    }
+                }
+            }
+            // Street lamps
+            for (var sl = 0; sl < 8; sl++) {
+                var slx = sl * (w / 8) + 40;
+                g.fillStyle(0x333344, 0.5);
+                g.fillRect(slx, 9 * TILE, 3, 3 * TILE);
+                g.fillStyle(0xffaa33, 0.2);
+                g.fillCircle(slx + 1, 9 * TILE, 8);
+            }
+        }
+    }
+
+    // --------------------------------------------------------
     // 12. applyPlayerAbilities(player, scene)
     //     Adds melee, ranged, and dash abilities to the player.
     //     Returns: { melee(), fire(), dash(), fireballs }
@@ -519,9 +664,7 @@ class LevelBuilder {
         var canMelee = true;
         var canFire = true;
         var fireballs = scene.physics.add.group({ allowGravity: false });
-
-        // Track melee hitbox for external collision checks
-        var meleeHitbox = null;
+        var _enemyGroups = [];
 
         // --- Melee (walking stick) ---
         function melee() {
@@ -535,13 +678,7 @@ class LevelBuilder {
             var hitX = player.x + direction * MELEE_RANGE;
             var hitY = player.y;
 
-            // Create temporary hitbox
-            meleeHitbox = scene.add.rectangle(hitX, hitY, MELEE_RANGE, 24, 0xffffff, 0);
-            scene.physics.add.existing(meleeHitbox, false);
-            meleeHitbox.body.setAllowGravity(false);
-            meleeHitbox.damage = MELEE_DAMAGE;
-
-            // Swing visual - a short stick sprite that rotates
+            // Swing visual
             var stick = scene.add.rectangle(
                 player.x + direction * 12, player.y - 4,
                 MELEE_RANGE, 4, 0x6b4226
@@ -554,23 +691,39 @@ class LevelBuilder {
                 angle: direction > 0 ? 60 : -60,
                 duration: 150,
                 yoyo: true,
-                onComplete: function () {
-                    stick.destroy();
-                }
+                onComplete: function () { stick.destroy(); }
             });
 
-            // Remove hitbox after a short window
-            scene.time.delayedCall(150, function () {
-                if (meleeHitbox) {
-                    meleeHitbox.destroy();
-                    meleeHitbox = null;
-                }
+            // Direct hit check against all registered enemy groups
+            _enemyGroups.forEach(function (group) {
+                group.getChildren().forEach(function (enemy) {
+                    if (!enemy.active) return;
+                    var dist = Phaser.Math.Distance.Between(hitX, hitY, enemy.x, enemy.y);
+                    if (dist < MELEE_RANGE + 16) {
+                        enemy.health = (enemy.health || 1) - MELEE_DAMAGE;
+                        if (typeof AudioManager !== 'undefined') AudioManager.sfxHit();
+                        // Knockback
+                        var kb = enemy.x > player.x ? 1 : -1;
+                        enemy.setVelocityX(kb * 180);
+                        enemy.setVelocityY(-120);
+                        // Flash
+                        enemy.setTint(0xff0000);
+                        scene.time.delayedCall(150, function () {
+                            if (enemy.active) enemy.clearTint();
+                        });
+                        if (enemy.health <= 0) {
+                            if (typeof AudioManager !== 'undefined') AudioManager.sfxEnemyDeath();
+                            scene.tweens.add({
+                                targets: enemy, alpha: 0, scaleX: 1.3, scaleY: 1.3,
+                                duration: 200, onComplete: function () { enemy.destroy(); }
+                            });
+                        }
+                    }
+                });
             });
 
             // Cooldown
-            scene.time.delayedCall(300, function () {
-                canMelee = true;
-            });
+            scene.time.delayedCall(300, function () { canMelee = true; });
         }
 
         // --- Ranged (lantern fire) ---
@@ -592,26 +745,16 @@ class LevelBuilder {
             fireball.spawnX = fireball.x;
             fireball.maxDistance = 600;
             fireball.direction = direction;
+            if (direction < 0) fireball.setFlipX(true);
 
-            // Flip sprite if going left
-            if (direction < 0) {
-                fireball.setFlipX(true);
-            }
-
-            // Cooldown
-            scene.time.delayedCall(FIRE_COOLDOWN, function () {
-                canFire = true;
-            });
+            scene.time.delayedCall(FIRE_COOLDOWN, function () { canFire = true; });
         }
 
         // Update loop: destroy fireballs that exceed travel distance
         scene.events.on('update', function () {
             fireballs.getChildren().forEach(function (fb) {
                 if (!fb.active) return;
-                var traveled = Math.abs(fb.x - fb.spawnX);
-                if (traveled >= fb.maxDistance) {
-                    fb.destroy();
-                }
+                if (Math.abs(fb.x - fb.spawnX) >= fb.maxDistance) fb.destroy();
             });
         });
 
@@ -626,7 +769,6 @@ class LevelBuilder {
             var direction = player.facingRight ? 1 : -1;
             player.setVelocityX(PLAYER_DASH_SPEED * direction);
 
-            // Afterimage trail - 3 fading copies
             for (var i = 0; i < 3; i++) {
                 (function (index) {
                     scene.time.delayedCall(index * 50, function () {
@@ -636,26 +778,18 @@ class LevelBuilder {
                         ghost.setTint(0x4488cc);
                         ghost.setDepth(player.depth - 1);
                         ghost.setFlipX(!player.facingRight);
-
                         scene.tweens.add({
-                            targets: ghost,
-                            alpha: 0,
-                            duration: 250,
-                            onComplete: function () {
-                                ghost.destroy();
-                            }
+                            targets: ghost, alpha: 0, duration: 250,
+                            onComplete: function () { ghost.destroy(); }
                         });
                     });
                 })(i);
             }
 
-            // End dash after duration
             scene.time.delayedCall(PLAYER_DASH_DURATION, function () {
                 player.isDashing = false;
                 player.isInvincible = false;
             });
-
-            // Dash cooldown
             player.dashCooldownTimer = scene.time.delayedCall(PLAYER_DASH_COOLDOWN, function () {
                 player.canDash = true;
                 player.dashCooldownTimer = null;
@@ -663,14 +797,6 @@ class LevelBuilder {
         }
 
         // --- Key bindings ---
-        var keys = scene.input.keyboard.addKeys({
-            meleeX: Phaser.Input.Keyboard.KeyCodes.X,
-            meleeJ: Phaser.Input.Keyboard.KeyCodes.J,
-            fireC: Phaser.Input.Keyboard.KeyCodes.C,
-            fireK: Phaser.Input.Keyboard.KeyCodes.K,
-            dashShift: Phaser.Input.Keyboard.KeyCodes.SHIFT
-        });
-
         scene.input.keyboard.on('keydown-X', melee);
         scene.input.keyboard.on('keydown-J', melee);
         scene.input.keyboard.on('keydown-C', fire);
@@ -681,7 +807,8 @@ class LevelBuilder {
             melee: melee,
             fire: fire,
             dash: dash,
-            fireballs: fireballs
+            fireballs: fireballs,
+            registerEnemies: function (group) { _enemyGroups.push(group); }
         };
     }
 

@@ -50,6 +50,7 @@ class Stage7A_Isagani extends Phaser.Scene {
         this.physics.add.collider(this.enemies, this.platforms);
         this.physics.add.overlap(this.player, this.enemies, this.onPlayerEnemyContact, null, this);
         this.physics.add.overlap(this.abilities.fireballs, this.enemies, this.onFireballHitEnemy, null, this);
+        this.abilities.registerEnemies(this.enemies);
 
         // Lamp pickup (at roughly tile 55)
         this.lampPickup = this.add.sprite(55 * TILE, 12 * TILE, 'sprite_lamp').setScale(2).setDepth(510);
@@ -270,7 +271,7 @@ class Stage7A_Isagani extends Phaser.Scene {
         this.cameras.main.shake(300, 0.02);
         var self = this;
         this.cameras.main.fade(1000, 0, 0, 0, false, function (cam, progress) {
-            if (progress === 1) self.scene.restart();
+            if (progress === 1) self.scene.start(STAGES.GAMEOVER, { stageName: 'Stage7A_Isagani' });
         });
     }
 

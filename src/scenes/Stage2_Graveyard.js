@@ -36,6 +36,9 @@ class Stage2_Graveyard extends Phaser.Scene {
         this.gravePlatforms = this.lb.createPlatformsFromString(this.getGraveOverlay(), 'tile_grave').platforms;
         this.stonePlatforms = this.lb.createPlatformsFromString(this.getStoneOverlay(), 'tile_stone').platforms;
 
+        // Environment decorations
+        this.lb.drawEnvironmentDecor('graveyard', this.worldWidth);
+
         // -------------------------------------------------------
         // Player
         // -------------------------------------------------------
@@ -404,6 +407,10 @@ class Stage2_Graveyard extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.guardiaEnemies, this.onPlayerHitEnemy, null, this);
         this.physics.add.overlap(this.player, this.banditEnemies, this.onPlayerHitEnemy, null, this);
 
+        // Register enemies for melee hits
+        this.abilities.registerEnemies(this.guardiaEnemies);
+        this.abilities.registerEnemies(this.banditEnemies);
+
         // Fireball vs enemies
         if (this.abilities && this.abilities.fireballs) {
             this.physics.add.overlap(this.abilities.fireballs, this.guardiaEnemies, this.onFireballHitEnemy, null, this);
@@ -623,14 +630,11 @@ class Stage2_Graveyard extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.player.body.setAllowGravity(false);
 
-        // Death fade
+        // Death fade -> game over
         var self = this;
-        this.tweens.add({
-            targets: this.player,
-            alpha: 0,
-            duration: 500,
-            onComplete: function () {
-                self.respawnPlayer();
+        this.cameras.main.fade(800, 0, 0, 0, false, function (cam, progress) {
+            if (progress >= 1) {
+                self.scene.start(STAGES.GAMEOVER, { stageName: 'Stage2_Graveyard' });
             }
         });
     }

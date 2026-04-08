@@ -44,7 +44,8 @@ var config = {
         Stage6_Reception,
         Stage7A_Isagani,
         Stage7B_Simoun,
-        EndingScene
+        EndingScene,
+        GameOverScene
     ]
 };
 

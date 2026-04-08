@@ -12,180 +12,323 @@ class TitleScene extends Phaser.Scene {
     }
 
     create() {
-        // Reset state
         this.selectedIndex = 0;
         this.showingControls = false;
         this.showingStageSelect = false;
 
-        // Start title music
         if (typeof AudioManager !== 'undefined') { AudioManager.stopMusic(); AudioManager.startMusic('title'); }
 
-        // -- Background: dark night sky gradient --
         this.createBackground();
-
-        // -- Twinkling stars --
+        this.createLandscape();
+        this.createWater();
         this.createStars();
-
-        // -- Firefly / ember particles floating up --
+        this.createMoon();
         this.createFireflies();
-
-        // -- Simoun silhouette with lantern glow --
         this.createSimounDisplay();
-
-        // -- Title text --
         this.createTitleText();
-
-        // -- Menu --
         this.createMenu();
 
-        // -- Bottom attribution --
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 24, 'Based on the novel by Jos\u00e9 Rizal', {
-            fontSize: '12px',
-            fontFamily: 'monospace',
-            color: '#888877'
-        }).setOrigin(0.5);
+        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 16, 'Based on the novel by Jos\u00e9 Rizal (1891)', {
+            fontSize: '11px', fontFamily: 'serif', color: '#665544', fontStyle: 'italic'
+        }).setOrigin(0.5).setAlpha(0.8);
 
-        // -- Controls overlay (hidden by default) --
         this.createControlsOverlay();
-
-        // -- Stage select overlay (hidden by default) --
         this.createStageSelectOverlay();
-
-        // -- Input --
         this.setupInput();
     }
 
     // -------------------------------------------------------
-    // Background
+    // Background - rich night sky
     // -------------------------------------------------------
     createBackground() {
         var bg = this.add.graphics();
-        var steps = 32;
+        var steps = 40;
         var stripH = Math.ceil(GAME_HEIGHT / steps);
         for (var i = 0; i < steps; i++) {
             var t = i / (steps - 1);
-            // Interpolate from deep blue (top) to near-black (bottom)
-            var r = Math.floor(10 * (1 - t));
-            var g = Math.floor(10 * (1 - t) + 5 * (1 - t));
-            var b = Math.floor(46 * (1 - t) + 10 * t);
-            var color = (r << 16) | (g << 8) | b;
-            bg.fillStyle(color, 1);
+            var r = Math.floor(8 * (1 - t) + 2 * t);
+            var g = Math.floor(6 * (1 - t) + 4 * t);
+            var b = Math.floor(35 * (1 - t) + 12 * t);
+            bg.fillStyle((r << 16) | (g << 8) | b, 1);
             bg.fillRect(0, i * stripH, GAME_WIDTH, stripH + 1);
         }
     }
 
     // -------------------------------------------------------
-    // Twinkling stars
+    // Philippine landscape silhouette
+    // -------------------------------------------------------
+    createLandscape() {
+        var g = this.add.graphics();
+        var groundY = GAME_HEIGHT - 80;
+
+        // Distant mountains
+        g.fillStyle(0x0a0a18, 1);
+        g.beginPath();
+        g.moveTo(0, groundY + 20);
+        g.lineTo(60, groundY - 40); g.lineTo(140, groundY - 80); g.lineTo(220, groundY - 30);
+        g.lineTo(300, groundY - 60); g.lineTo(380, groundY - 100); g.lineTo(460, groundY - 50);
+        g.lineTo(540, groundY - 70); g.lineTo(620, groundY - 90); g.lineTo(700, groundY - 45);
+        g.lineTo(780, groundY - 65); g.lineTo(860, groundY - 35); g.lineTo(GAME_WIDTH, groundY + 20);
+        g.lineTo(GAME_WIDTH, GAME_HEIGHT); g.lineTo(0, GAME_HEIGHT);
+        g.closePath(); g.fill();
+
+        // Church tower silhouette
+        g.fillStyle(0x080810, 1);
+        g.fillRect(700, groundY - 110, 20, 110);
+        g.fillRect(695, groundY - 120, 30, 12);
+        g.fillRect(704, groundY - 135, 12, 18);
+        // Cross on top
+        g.fillRect(708, groundY - 145, 4, 14);
+        g.fillRect(704, groundY - 140, 12, 3);
+
+        // Palm trees
+        var palmPositions = [120, 280, 520, 850];
+        palmPositions.forEach(function (px) {
+            g.fillStyle(0x060610, 1);
+            g.fillRect(px, groundY - 55, 4, 55);
+            // Fronds
+            for (var f = -3; f <= 3; f++) {
+                var fx = px + 2 + f * 14;
+                var fy = groundY - 55 - Math.abs(f) * 3;
+                g.beginPath();
+                g.moveTo(px + 2, groundY - 55);
+                g.lineTo(fx, fy - 8);
+                g.lineTo(fx + (f > 0 ? 4 : -4), fy);
+                g.closePath(); g.fill();
+            }
+        });
+
+        // Nipa huts
+        g.fillStyle(0x0c0c14, 1);
+        g.fillRect(380, groundY - 20, 30, 20);
+        g.beginPath(); g.moveTo(375, groundY - 20); g.lineTo(395, groundY - 38); g.lineTo(415, groundY - 20); g.closePath(); g.fill();
+        g.fillRect(160, groundY - 16, 22, 16);
+        g.beginPath(); g.moveTo(156, groundY - 16); g.lineTo(171, groundY - 30); g.lineTo(186, groundY - 16); g.closePath(); g.fill();
+
+        // Foreground ground strip
+        g.fillStyle(0x060610, 1);
+        g.fillRect(0, groundY + 15, GAME_WIDTH, GAME_HEIGHT - groundY);
+    }
+
+    // -------------------------------------------------------
+    // Animated water (Pasig river)
+    // -------------------------------------------------------
+    createWater() {
+        var waterY = GAME_HEIGHT - 65;
+        var g = this.add.graphics();
+        g.fillStyle(0x0a1a30, 0.7);
+        g.fillRect(0, waterY, GAME_WIDTH, 20);
+
+        // Shimmering reflections
+        for (var i = 0; i < 15; i++) {
+            var rx = Phaser.Math.Between(20, GAME_WIDTH - 20);
+            var rw = Phaser.Math.Between(20, 60);
+            var ref = this.add.rectangle(rx, waterY + Phaser.Math.Between(2, 16), rw, 1, 0x2244aa, 0.2);
+            this.tweens.add({
+                targets: ref, alpha: 0.05, x: rx + Phaser.Math.Between(-10, 10),
+                duration: Phaser.Math.Between(2000, 4000), yoyo: true, repeat: -1
+            });
+        }
+    }
+
+    // -------------------------------------------------------
+    // Stars with variety
     // -------------------------------------------------------
     createStars() {
-        this.stars = [];
-        for (var i = 0; i < 60; i++) {
+        for (var i = 0; i < 100; i++) {
             var sx = Phaser.Math.Between(0, GAME_WIDTH);
-            var sy = Phaser.Math.Between(0, GAME_HEIGHT * 0.6);
-            var size = Phaser.Math.Between(1, 2);
-            var star = this.add.rectangle(sx, sy, size, size, 0xffffff);
-            star.setAlpha(Phaser.Math.FloatBetween(0.2, 0.8));
-            this.stars.push(star);
+            var sy = Phaser.Math.Between(0, GAME_HEIGHT * 0.55);
+            var size = Phaser.Math.Between(1, 3);
+            var brightness = Phaser.Math.FloatBetween(0.15, 0.9);
+            var tints = [0xffffff, 0xffeedd, 0xddddff, 0xffddaa];
+            var tint = tints[Math.floor(Math.random() * tints.length)];
+            var star = this.add.rectangle(sx, sy, size, size, tint);
+            star.setAlpha(brightness);
 
-            // Twinkling tween
             this.tweens.add({
                 targets: star,
-                alpha: Phaser.Math.FloatBetween(0.1, 0.4),
-                duration: Phaser.Math.Between(1000, 3000),
-                yoyo: true,
-                repeat: -1,
+                alpha: Phaser.Math.FloatBetween(0.05, brightness * 0.4),
+                duration: Phaser.Math.Between(800, 3000),
+                yoyo: true, repeat: -1,
                 delay: Phaser.Math.Between(0, 2000)
             });
         }
+
+        // Occasional shooting star
+        var scene = this;
+        function shootingStar() {
+            var sx2 = Phaser.Math.Between(100, GAME_WIDTH - 100);
+            var sy2 = Phaser.Math.Between(20, 150);
+            var ss = scene.add.rectangle(sx2, sy2, 3, 1, 0xffffff, 0.9);
+            scene.tweens.add({
+                targets: ss, x: sx2 + 120, y: sy2 + 60, alpha: 0, scaleX: 6,
+                duration: 400, onComplete: function () { ss.destroy(); }
+            });
+            scene.time.delayedCall(Phaser.Math.Between(5000, 12000), shootingStar);
+        }
+        this.time.delayedCall(3000, shootingStar);
+    }
+
+    // -------------------------------------------------------
+    // Moon with craters and glow
+    // -------------------------------------------------------
+    createMoon() {
+        var mx = GAME_WIDTH - 140, my = 80;
+        // Outer glow layers
+        this.add.circle(mx, my, 60, 0x8899bb, 0.04);
+        this.add.circle(mx, my, 45, 0x99aacc, 0.06);
+        this.add.circle(mx, my, 32, 0xaabbdd, 0.08);
+        // Moon body
+        var moon = this.add.circle(mx, my, 24, 0xddeeff, 0.8);
+        // Craters
+        this.add.circle(mx - 6, my - 4, 4, 0xbbccdd, 0.5);
+        this.add.circle(mx + 8, my + 3, 3, 0xbbccdd, 0.4);
+        this.add.circle(mx - 2, my + 8, 2, 0xccddee, 0.3);
+        // Soft pulse
+        var glow = this.add.circle(mx, my, 35, 0x8899bb, 0.05);
+        this.tweens.add({ targets: glow, scaleX: 1.2, scaleY: 1.2, alpha: 0.02, duration: 3000, yoyo: true, repeat: -1 });
     }
 
     // -------------------------------------------------------
     // Firefly / ember particles
     // -------------------------------------------------------
     createFireflies() {
-        // Use particle_fire texture as small embers floating upward
         if (this.textures.exists('particle_fire')) {
-            this.fireflyEmitter = this.add.particles(0, 0, 'particle_fire', {
+            this.add.particles(0, 0, 'particle_fire', {
                 x: { min: 0, max: GAME_WIDTH },
                 y: GAME_HEIGHT + 10,
-                lifespan: { min: 4000, max: 7000 },
-                speedY: { min: -30, max: -15 },
-                speedX: { min: -10, max: 10 },
-                scale: { start: 0.8, end: 0.2 },
-                alpha: { start: 0.6, end: 0 },
-                frequency: 600,
-                quantity: 1,
+                lifespan: { min: 4000, max: 8000 },
+                speedY: { min: -25, max: -10 },
+                speedX: { min: -8, max: 8 },
+                scale: { start: 0.7, end: 0.1 },
+                alpha: { start: 0.5, end: 0 },
+                frequency: 400, quantity: 1,
                 blendMode: 'ADD',
-                tint: [0xffd700, 0xff8800, 0xffaa33]
+                tint: [0xffd700, 0xff8800, 0xffaa33, 0xff6600]
             });
         }
     }
 
     // -------------------------------------------------------
-    // Simoun silhouette with lantern glow
+    // Simoun silhouette - dramatic figure on hill
     // -------------------------------------------------------
     createSimounDisplay() {
-        var centerX = GAME_WIDTH / 2;
-        var charY = GAME_HEIGHT * 0.52;
+        var cx = GAME_WIDTH / 2, cy = GAME_HEIGHT * 0.52;
+        var g = this.add.graphics();
 
-        // Lantern glow (orange circle behind the character, pulsing)
-        this.lanternGlow = this.add.circle(centerX, charY - 10, 60, 0xff8800, 0.12);
-        this.lanternGlow.setBlendMode('ADD');
+        // Hill/cliff under Simoun
+        g.fillStyle(0x0a0a14, 1);
+        g.beginPath();
+        g.moveTo(cx - 80, cy + 50);
+        g.lineTo(cx - 30, cy + 10);
+        g.lineTo(cx + 30, cy + 10);
+        g.lineTo(cx + 80, cy + 50);
+        g.lineTo(cx + 80, GAME_HEIGHT);
+        g.lineTo(cx - 80, GAME_HEIGHT);
+        g.closePath(); g.fill();
 
-        this.tweens.add({
-            targets: this.lanternGlow,
-            alpha: 0.06,
-            scaleX: 1.15,
-            scaleY: 1.15,
-            duration: 2000,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
+        // Lantern warm glow (large, atmospheric)
+        var glow1 = this.add.circle(cx + 14, cy - 14, 80, 0xff6600, 0.06);
+        glow1.setBlendMode('ADD');
+        var glow2 = this.add.circle(cx + 14, cy - 14, 45, 0xff8800, 0.1);
+        glow2.setBlendMode('ADD');
+        var glow3 = this.add.circle(cx + 14, cy - 14, 20, 0xffaa33, 0.15);
+        glow3.setBlendMode('ADD');
 
-        // Simoun sprite scaled up 4x
-        if (this.textures.exists('sprite_simoun')) {
-            this.simounSprite = this.add.image(centerX, charY, 'sprite_simoun');
-            this.simounSprite.setScale(4);
-            // Pixelated rendering since we are scaling up pixel art
-            this.simounSprite.setTexture('sprite_simoun');
-        } else {
-            // Fallback silhouette if sprite not yet generated
-            var fallback = this.add.graphics();
-            fallback.fillStyle(0x1a1a2e, 1);
-            fallback.fillRect(centerX - 16, charY - 32, 32, 64);
-            fallback.fillStyle(0x4488cc, 0.7);
-            fallback.fillCircle(centerX, charY - 28, 6);
+        this.tweens.add({ targets: [glow1, glow2, glow3], alpha: '-=0.03', scaleX: 1.1, scaleY: 1.1, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+        // Light rays from lantern
+        var rayG = this.add.graphics();
+        rayG.setAlpha(0.04);
+        rayG.fillStyle(0xffaa44, 1);
+        for (var r = 0; r < 5; r++) {
+            var angle = -60 + r * 30;
+            var rad = angle * Math.PI / 180;
+            rayG.beginPath();
+            rayG.moveTo(cx + 14, cy - 14);
+            rayG.lineTo(cx + 14 + Math.cos(rad) * 120, cy - 14 + Math.sin(rad) * 120);
+            rayG.lineTo(cx + 14 + Math.cos(rad + 0.15) * 120, cy - 14 + Math.sin(rad + 0.15) * 120);
+            rayG.closePath(); rayG.fill();
         }
+        this.tweens.add({ targets: rayG, alpha: 0.02, duration: 2000, yoyo: true, repeat: -1 });
+
+        // Simoun figure (dark silhouette, larger and more detailed)
+        var s = this.add.graphics();
+        s.fillStyle(0x0a0a12, 1);
+        // Hat (wide brim)
+        s.fillRect(cx - 16, cy - 34, 32, 4);
+        s.fillRect(cx - 10, cy - 40, 20, 7);
+        // Head
+        s.fillRoundedRect(cx - 8, cy - 30, 16, 16, 3);
+        // Blue glasses glint
+        s.fillStyle(0x4488cc, 0.6);
+        s.fillRect(cx - 6, cy - 25, 4, 3);
+        s.fillRect(cx + 2, cy - 25, 4, 3);
+        // Body/coat
+        s.fillStyle(0x0a0a12, 1);
+        s.fillRect(cx - 10, cy - 14, 20, 22);
+        // Cape/coat tails
+        s.beginPath();
+        s.moveTo(cx - 10, cy - 14);
+        s.lineTo(cx - 18, cy + 8);
+        s.lineTo(cx - 10, cy + 8);
+        s.closePath(); s.fill();
+        s.beginPath();
+        s.moveTo(cx + 10, cy - 14);
+        s.lineTo(cx + 18, cy + 8);
+        s.lineTo(cx + 10, cy + 8);
+        s.closePath(); s.fill();
+        // Arm holding lantern (right arm extended)
+        s.fillRect(cx + 8, cy - 10, 12, 4);
+        // Lantern
+        s.fillStyle(0xffaa33, 0.9);
+        s.fillRect(cx + 18, cy - 18, 6, 8);
+        s.fillStyle(0xffdd66, 1);
+        s.fillRect(cx + 19, cy - 16, 4, 4);
+        // Legs
+        s.fillStyle(0x0a0a12, 1);
+        s.fillRect(cx - 7, cy + 8, 6, 12);
+        s.fillRect(cx + 1, cy + 8, 6, 12);
     }
 
     // -------------------------------------------------------
-    // Title text with glow
+    // Title text - ornate with decorative elements
     // -------------------------------------------------------
     createTitleText() {
-        var centerX = GAME_WIDTH / 2;
+        var cx = GAME_WIDTH / 2;
 
-        // Title with shadow/glow effect
-        this.add.text(centerX, 60, 'EL FILIBUSTERISMO', {
-            fontSize: '32px',
-            fontFamily: 'monospace',
-            color: '#ffd700',
-            shadow: {
-                offsetX: 0,
-                offsetY: 0,
-                color: '#ffd700',
-                blur: 12,
-                fill: true,
-                stroke: true
-            }
+        // Shadow layer
+        this.add.text(cx + 2, 52, 'EL FILIBUSTERISMO', {
+            fontSize: '36px', fontFamily: 'serif', color: '#1a1000',
+            letterSpacing: 4
         }).setOrigin(0.5);
 
-        // Subtitle
-        this.add.text(centerX, 100, 'The Jeweler\'s Revenge', {
-            fontSize: '16px',
-            fontFamily: 'monospace',
-            color: '#f0ead6'
+        // Main title
+        this.add.text(cx, 50, 'EL FILIBUSTERISMO', {
+            fontSize: '36px', fontFamily: 'serif', color: '#ffd700',
+            shadow: { offsetX: 0, offsetY: 0, color: '#ffd700', blur: 16, fill: true, stroke: true },
+            letterSpacing: 4
         }).setOrigin(0.5);
+
+        // Decorative line
+        var dg = this.add.graphics();
+        dg.lineStyle(1, 0x8b7355, 0.6);
+        dg.moveTo(cx - 180, 78); dg.lineTo(cx - 40, 78);
+        dg.moveTo(cx + 40, 78); dg.lineTo(cx + 180, 78);
+        dg.strokePath();
+        // Diamond ornament center
+        dg.fillStyle(0xffd700, 0.7);
+        dg.beginPath(); dg.moveTo(cx, 74); dg.lineTo(cx + 6, 78); dg.lineTo(cx, 82); dg.lineTo(cx - 6, 78); dg.closePath(); dg.fill();
+        // Small dots
+        dg.fillCircle(cx - 30, 78, 1.5);
+        dg.fillCircle(cx + 30, 78, 1.5);
+
+        // Subtitle with delay
+        var sub = this.add.text(cx, 94, 'The Jeweler\'s Revenge', {
+            fontSize: '16px', fontFamily: 'serif', color: '#d4c8a8', fontStyle: 'italic'
+        }).setOrigin(0.5).setAlpha(0);
+
+        this.tweens.add({ targets: sub, alpha: 1, duration: 1200, delay: 600 });
     }
 
     // -------------------------------------------------------
@@ -193,32 +336,43 @@ class TitleScene extends Phaser.Scene {
     // -------------------------------------------------------
     createMenu() {
         var centerX = GAME_WIDTH / 2;
-        var startY = GAME_HEIGHT - 140;
-        var spacing = 30;
+        var startY = GAME_HEIGHT - 155;
+        var spacing = 38;
         var labels = ['New Game', 'Stage Select', 'Controls'];
 
         this.menuItems = [];
+        this.menuBgs = [];
         this.menuGroup = this.add.group();
 
+        // Menu container background
+        var menuBg = this.add.rectangle(centerX, startY + spacing, 240, spacing * 3 + 20, 0x0a0a1e, 0.6);
+        menuBg.setStrokeStyle(1, 0x8b7355, 0.4);
+        this.menuGroup.add(menuBg);
+
         for (var i = 0; i < labels.length; i++) {
+            var bg = this.add.rectangle(centerX, startY + i * spacing, 200, 30, 0x1a1a2e, 0);
+            bg.setStrokeStyle(1, 0x8b7355, 0);
+            this.menuBgs.push(bg);
+            this.menuGroup.add(bg);
+
             var txt = this.add.text(centerX, startY + i * spacing, labels[i], {
-                fontSize: '18px',
-                fontFamily: 'monospace',
-                color: '#f0ead6'
+                fontSize: '18px', fontFamily: 'serif', color: '#f0ead6'
             }).setOrigin(0.5);
 
             txt.setInteractive({ useHandCursor: true });
             txt.menuIndex = i;
-
-            // Click handler
             txt.on('pointerdown', this.onMenuClick, this);
-            txt.on('pointerover', function () {
-                this.scene.selectMenuItem(this.menuIndex);
-            });
+            txt.on('pointerover', function () { this.scene.selectMenuItem(this.menuIndex); });
 
             this.menuItems.push(txt);
             this.menuGroup.add(txt);
         }
+
+        // Animated cursor arrow
+        this.menuCursor = this.add.text(centerX - 110, startY, '\u25ba', {
+            fontSize: '18px', fontFamily: 'serif', color: '#ffd700'
+        }).setOrigin(0.5);
+        this.menuGroup.add(this.menuCursor);
 
         this.updateMenuHighlight();
     }
@@ -229,14 +383,31 @@ class TitleScene extends Phaser.Scene {
     }
 
     updateMenuHighlight() {
+        var labels = ['New Game', 'Stage Select', 'Controls'];
+        var startY = GAME_HEIGHT - 155;
+        var spacing = 38;
+
         for (var i = 0; i < this.menuItems.length; i++) {
             if (i === this.selectedIndex) {
                 this.menuItems[i].setColor('#ffd700');
-                this.menuItems[i].setText('> ' + this.getMenuLabel(i) + ' <');
+                this.menuItems[i].setText(labels[i]);
+                this.menuBgs[i].setFillStyle(0x1a1a2e, 0.5);
+                this.menuBgs[i].setStrokeStyle(1, 0xffd700, 0.4);
             } else {
                 this.menuItems[i].setColor('#f0ead6');
-                this.menuItems[i].setText(this.getMenuLabel(i));
+                this.menuItems[i].setText(labels[i]);
+                this.menuBgs[i].setFillStyle(0x1a1a2e, 0);
+                this.menuBgs[i].setStrokeStyle(1, 0x8b7355, 0);
             }
+        }
+
+        // Move cursor
+        if (this.menuCursor) {
+            this.tweens.add({
+                targets: this.menuCursor,
+                y: startY + this.selectedIndex * spacing,
+                duration: 100, ease: 'Power2'
+            });
         }
     }
 
